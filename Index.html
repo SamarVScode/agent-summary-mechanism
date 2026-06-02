@@ -1,0 +1,2392 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <title>Wishmaster Payout & Performance Dashboard</title>
+  <!-- Responsive Meta Tag -->
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <!-- Tailwind CSS CDN -->
+  <script src="https://cdn.tailwindcss.com"></script>
+  <!-- FontAwesome Icons -->
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+  <!-- Google Font: Inter -->
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+  <!-- Chart.js CDN -->
+  <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+  <!-- Alpine.js CDN -->
+  <script defer src="https://cdn.jsdelivr.net/npm/alpinejs@3.x.x/dist/cdn.min.js"></script>
+
+  <style>
+    body {
+      font-family: 'Inter', sans-serif;
+      background-color: #0b0f19;
+      background-image: 
+        radial-gradient(at 0% 0%, rgba(99, 102, 241, 0.15) 0px, transparent 50%),
+        radial-gradient(at 100% 100%, rgba(16, 185, 129, 0.08) 0px, transparent 50%);
+      background-attachment: fixed;
+    }
+    .glass {
+      background: rgba(17, 24, 39, 0.7);
+      backdrop-filter: blur(16px);
+      -webkit-backdrop-filter: blur(16px);
+      border: 1px solid rgba(255, 255, 255, 0.06);
+    }
+    .glass-dark {
+      background: rgba(10, 15, 30, 0.85);
+      backdrop-filter: blur(20px);
+      -webkit-backdrop-filter: blur(20px);
+      border: 1px solid rgba(255, 255, 255, 0.05);
+    }
+    /* Custom scrollbar */
+    ::-webkit-scrollbar {
+      width: 6px;
+      height: 6px;
+    }
+    ::-webkit-scrollbar-track {
+      background: rgba(15, 23, 42, 0.5);
+    }
+    ::-webkit-scrollbar-thumb {
+      background: rgba(99, 102, 241, 0.3);
+      border-radius: 4px;
+    }
+    ::-webkit-scrollbar-thumb:hover {
+      background: rgba(99, 102, 241, 0.5);
+    }
+
+    /* Print styles */
+    @media print {
+      body * {
+        visibility: hidden;
+      }
+      .print-area, .print-area * {
+        visibility: visible;
+      }
+      .print-area {
+        position: absolute;
+        left: 0;
+        top: 0;
+        width: 100%;
+        background: white !important;
+        color: black !important;
+      }
+      .no-print {
+        display: none !important;
+      }
+    }
+  </style>
+</head>
+<body class="text-slate-100 min-h-screen" x-data="dashboardApp()">
+
+  <!-- Toast Notification Wrapper -->
+  <div class="fixed bottom-4 right-4 z-50 flex flex-col space-y-2 max-w-sm w-full no-print">
+    <template x-for="toast in toasts" :key="toast.id">
+      <div x-transition class="glass p-4 rounded-xl flex items-center space-x-3 shadow-2xl border border-slate-700/50"
+           :class="toast.type === 'success' ? 'border-emerald-500/30' : 'border-rose-500/30'">
+        <div class="flex-shrink-0">
+          <template x-if="toast.type === 'success'">
+            <i class="fa-solid fa-circle-check text-emerald-400 text-lg"></i>
+          </template>
+          <template x-if="toast.type === 'error'">
+            <i class="fa-solid fa-triangle-exclamation text-rose-400 text-lg"></i>
+          </template>
+        </div>
+        <div class="flex-1 text-sm font-medium text-slate-200" x-text="toast.message"></div>
+        <button @click="toasts = toasts.filter(t => t.id !== toast.id)" class="text-slate-400 hover:text-slate-200 text-xs">
+          <i class="fa-solid fa-xmark"></i>
+        </button>
+      </div>
+    </template>
+  </div>
+
+  <!-- Global Glassmorphic Full-Page Loading Screen -->
+  <div x-show="loading" class="fixed inset-0 z-[120] flex flex-col items-center justify-center bg-slate-950/80 backdrop-blur-md no-print" x-transition>
+    <div class="glass p-8 rounded-2xl border border-slate-700/50 shadow-2xl flex flex-col items-center space-y-4 max-w-xs text-center">
+      <div class="relative w-16 h-16 flex items-center justify-center">
+        <!-- Spinners -->
+        <div class="absolute inset-0 rounded-full border-4 border-indigo-500/20"></div>
+        <div class="absolute inset-0 rounded-full border-4 border-indigo-500 border-t-transparent animate-spin"></div>
+        <i class="fa-solid fa-cloud-arrow-down text-indigo-400 text-xl animate-pulse"></i>
+      </div>
+      <div>
+        <h4 class="text-sm font-bold text-white tracking-wide">Syncing Payout Data</h4>
+        <p class="text-[10px] text-slate-400 mt-1 leading-relaxed">Retrieving ledger details and initializing secure administrative corrections tab...</p>
+      </div>
+    </div>
+  </div>
+
+  <!-- Top Navigation Bar -->
+  <header class="border-b border-slate-800/80 bg-[#111827]/40 backdrop-blur sticky top-0 z-40 px-6 py-4 flex flex-wrap items-center justify-between gap-4 no-print">
+    <div class="flex items-center space-x-3">
+      <div class="bg-gradient-to-tr from-indigo-600 to-indigo-500 p-2.5 rounded-xl text-white shadow-lg shadow-indigo-500/20">
+        <i class="fa-solid fa-chart-line text-xl"></i>
+      </div>
+      <div>
+        <h1 class="text-lg font-bold tracking-tight text-white flex items-center">
+          Wishmaster Payout Dashboard
+          <span class="ml-2 text-[10px] bg-indigo-500/10 text-indigo-400 px-2 py-0.5 rounded-full border border-indigo-500/20">v1.2</span>
+        </h1>
+        <p class="text-xs text-slate-400">High-End Performance, Conversion & Earnings Panel</p>
+      </div>
+    </div>
+    
+    <!-- Environment & Synchronization -->
+    <div class="flex flex-wrap items-center gap-4">
+      <!-- Selected Month Static Badge -->
+      <div class="flex items-center space-x-2 bg-indigo-950/40 border border-indigo-500/25 px-3 py-1.5 rounded-xl select-none">
+        <span class="text-[10px] uppercase font-extrabold tracking-wider text-indigo-400"><i class="fa-solid fa-calendar-days mr-1.5 text-[11px]"></i>Period:</span>
+        <span class="text-xs font-bold text-slate-200" x-text="formatMonthYear(selectedMonth)"></span>
+      </div>
+
+
+        <div class="flex items-center space-x-2">
+          <!-- Syncing State -->
+          <template x-if="loading || processing">
+            <span class="text-xs font-semibold px-2.5 py-1.5 bg-amber-500/10 text-amber-400 border border-amber-500/20 rounded-xl flex items-center space-x-1.5 shadow-sm shadow-amber-500/5 animate-pulse select-none">
+              <i class="fa-solid fa-spinner fa-spin text-amber-400"></i>
+              <span>Syncing...</span>
+            </span>
+          </template>
+          
+          <!-- Synced State -->
+          <template x-if="!(loading || processing)">
+            <span class="text-xs font-semibold px-2.5 py-1.5 bg-emerald-500/10 text-emerald-400 border border-emerald-500/20 rounded-xl flex items-center space-x-1.5 shadow-sm shadow-emerald-500/5 select-none transition duration-300">
+              <i class="fa-solid fa-circle-check text-emerald-400"></i>
+              <span>Synced</span>
+            </span>
+          </template>
+        </div>
+
+
+      <!-- Premium Refresh Dashboard Button -->
+      <button @click="refreshData()" 
+              class="px-3.5 py-1.5 bg-indigo-600/10 hover:bg-indigo-600/20 text-indigo-400 rounded-xl text-xs font-semibold border border-indigo-500/20 hover:border-indigo-500/35 transition flex items-center space-x-2 shadow-lg shadow-indigo-600/5" 
+              :disabled="loading">
+        <i class="fa-solid" :class="loading ? 'fa-spinner fa-spin text-indigo-400' : 'fa-arrows-rotate'"></i>
+        <span x-text="loading ? 'Refreshing...' : 'Refresh Data'"></span>
+      </button>
+    </div>
+  </header>
+
+  <!-- Tabs Navigation Bar below Header -->
+  <nav class="max-w-7xl mx-auto px-6 pt-6 no-print">
+    <div class="flex flex-wrap gap-2 border-b border-slate-850 pb-3">
+      <!-- Overview Hub -->
+      <button @click="currentView = 'overview'" 
+              class="px-4 py-2.5 rounded-xl text-xs font-semibold transition flex items-center space-x-2 border"
+              :class="currentView === 'overview' ? 'bg-indigo-600 border-indigo-500 text-white shadow-lg shadow-indigo-600/15' : 'bg-slate-900/40 border-slate-800 text-slate-400 hover:text-slate-200 hover:bg-slate-800/40'">
+        <i class="fa-solid fa-house"></i>
+        <span>Overview Hub</span>
+      </button>
+
+      <!-- Wishmaster Directory -->
+      <button @click="currentView = 'wishmasters'" 
+              class="px-4 py-2.5 rounded-xl text-xs font-semibold transition flex items-center space-x-2 border"
+              :class="currentView === 'wishmasters' ? 'bg-indigo-600 border-indigo-500 text-white shadow-lg shadow-indigo-600/15' : 'bg-slate-900/40 border-slate-800 text-slate-400 hover:text-slate-200 hover:bg-slate-800/40'">
+        <i class="fa-solid fa-users"></i>
+        <span>Wishmaster Directory</span>
+      </button>
+
+      <!-- Agent Dashboard (Only when selectedWishmaster is set) -->
+      <button x-show="selectedWishmaster !== ''" 
+              @click="currentView = 'detail'" 
+              class="px-4 py-2.5 rounded-xl text-xs font-semibold transition flex items-center space-x-2 border"
+              :class="currentView === 'detail' ? 'bg-indigo-600 border-indigo-500 text-white shadow-lg shadow-indigo-600/15' : 'bg-slate-900/40 border-slate-800 text-slate-400 hover:text-slate-200 hover:bg-slate-800/40'">
+        <i class="fa-solid fa-chart-pie"></i>
+        <span>Agent Dashboard</span>
+      </button>
+    </div>
+  </nav>
+
+  <!-- Main Dashboard Grid -->
+  <main class="max-w-7xl mx-auto p-6 space-y-6 no-print">
+
+    <!-- ============================================== -->
+    <!-- 1. HOME/OVERVIEW HUB PAGE -->
+    <!-- ============================================== -->
+    <div x-show="currentView === 'overview'" class="space-y-6" x-transition>
+      
+      <!-- Top Dynamic KPI Cards -->
+      <section class="grid grid-cols-1 sm:grid-cols-3 gap-6">
+        <!-- Card 1: Active Wishmasters -->
+        <div class="glass p-6 rounded-2xl relative overflow-hidden group hover:border-slate-700 transition duration-300 shadow-md">
+          <div class="absolute -right-4 -bottom-4 text-indigo-500/10 text-8xl group-hover:scale-110 transition duration-300">
+            <i class="fa-solid fa-users"></i>
+          </div>
+          <div class="flex justify-between items-start">
+            <div>
+              <p class="text-xs font-semibold uppercase tracking-wider text-slate-400">Active Wishmasters</p>
+              <p class="text-3xl font-extrabold text-indigo-400 mt-2" x-text="overviewStats.activeCount"></p>
+            </div>
+            <div class="bg-indigo-500/10 text-indigo-400 p-2.5 rounded-xl border border-indigo-500/20">
+              <i class="fa-solid fa-users text-md"></i>
+            </div>
+          </div>
+          <span class="text-[10px] font-medium text-slate-400 mt-3 block" x-text="'Unique drivers active in ' + (selectedMonth === 'All' ? 'all months' : selectedMonth)"></span>
+        </div>
+
+        <!-- Card 2: Total Payout Volume -->
+        <div class="glass p-6 rounded-2xl relative overflow-hidden group hover:border-slate-700 transition duration-300 shadow-md">
+          <div class="absolute -right-4 -bottom-4 text-emerald-500/10 text-8xl group-hover:scale-110 transition duration-300 font-bold">₹</div>
+          <div class="flex justify-between items-start">
+            <div>
+              <p class="text-xs font-semibold uppercase tracking-wider text-slate-400">Total Payout Volume</p>
+              <p class="text-3xl font-extrabold text-emerald-400 mt-2" x-text="'₹' + formatNumber(overviewStats.totalEarnings)"></p>
+            </div>
+            <div class="bg-emerald-500/10 text-emerald-400 p-2.5 rounded-xl border border-emerald-500/20">
+              <i class="fa-solid fa-indian-rupee-sign text-md"></i>
+            </div>
+          </div>
+          <span class="text-[10px] font-medium text-slate-400 mt-3 block" x-text="'Combined earnings of all drivers'"></span>
+        </div>
+
+        <!-- Card 3: Average Payout Progress -->
+        <div class="glass p-6 rounded-2xl relative overflow-hidden group hover:border-slate-700 transition duration-300 shadow-md">
+          <div class="absolute -right-4 -bottom-4 text-sky-500/10 text-8xl group-hover:scale-110 transition duration-300">
+            <i class="fa-solid fa-circle-check"></i>
+          </div>
+          <div class="flex justify-between items-start">
+            <div>
+              <p class="text-xs font-semibold uppercase tracking-wider text-slate-400">Payout Progress</p>
+              <p class="text-3xl font-extrabold text-sky-400 mt-2" x-text="overviewStats.payoutProgress + '%'"></p>
+            </div>
+            <div class="bg-sky-500/10 text-sky-400 p-2.5 rounded-xl border border-sky-500/20">
+              <i class="fa-solid fa-percent text-md"></i>
+            </div>
+          </div>
+          <span class="text-[10px] font-medium text-slate-400 mt-3 block flex justify-between">
+            <span x-text="'Paid: ₹' + formatNumber(overviewStats.totalPaid)"></span>
+            <span class="text-sky-400 font-semibold" x-text="(100 - overviewStats.payoutProgress) + '% pending'"></span>
+          </span>
+        </div>
+      </section>
+
+      <!-- Graphical ratio and distributions section -->
+      <section class="grid grid-cols-1 lg:grid-cols-2 gap-6">
+        
+        <!-- Task Workload Ratio -->
+        <div class="glass p-6 rounded-2xl shadow-md flex flex-col justify-between">
+          <div>
+            <h3 class="text-sm font-semibold text-slate-200 mb-4">
+              <i class="fa-solid fa-scale-balanced text-indigo-400 mr-2"></i>Task Workload Ratio
+            </h3>
+            <div class="flex justify-between items-center text-xs text-slate-400 mb-3">
+              <span class="flex items-center space-x-1.5 text-sky-400 font-semibold">
+                <span class="w-2.5 h-2.5 rounded-full bg-sky-400"></span>
+                <span>Completed Deliveries: <span x-text="overviewStats.delivered"></span> (<span x-text="(overviewStats.delivered + overviewStats.pickedUp > 0 ? ((overviewStats.delivered / (overviewStats.delivered + overviewStats.pickedUp)) * 100).toFixed(1) : '0.0') + '%'"></span>)</span>
+              </span>
+              <span class="flex items-center space-x-1.5 text-amber-400 font-semibold">
+                <span class="w-2.5 h-2.5 rounded-full bg-amber-400"></span>
+                <span>Completed Pickups: <span x-text="overviewStats.pickedUp"></span> (<span x-text="(overviewStats.delivered + overviewStats.pickedUp > 0 ? ((overviewStats.pickedUp / (overviewStats.delivered + overviewStats.pickedUp)) * 100).toFixed(1) : '0.0') + '%'"></span>)</span>
+              </span>
+            </div>
+            <div class="w-full bg-slate-800 rounded-full h-4 overflow-hidden flex border border-slate-700">
+              <div class="bg-sky-400 h-full transition-all duration-500" :style="'width: ' + (overviewStats.delivered + overviewStats.pickedUp > 0 ? (overviewStats.delivered / (overviewStats.delivered + overviewStats.pickedUp)) * 100 : 50) + '%'"></div>
+              <div class="bg-amber-400 h-full transition-all duration-500" :style="'width: ' + (overviewStats.delivered + overviewStats.pickedUp > 0 ? (overviewStats.pickedUp / (overviewStats.delivered + overviewStats.pickedUp)) * 100 : 50) + '%'"></div>
+            </div>
+          </div>
+          <div class="mt-6 p-3 bg-slate-900/40 rounded-xl border border-slate-800/80 text-[10px] text-slate-400 flex flex-wrap gap-2 justify-between">
+            <span>Total Deliveries Out for Delivery (OFD): <strong class="text-slate-300" x-text="overviewStats.ofd"></strong></span>
+            <span>Total Pickups Out for Pickup (OFP): <strong class="text-slate-300" x-text="overviewStats.ofp"></strong></span>
+          </div>
+        </div>
+
+        <!-- DC Workload Distributions -->
+        <div class="glass p-6 rounded-2xl shadow-md">
+          <h3 class="text-sm font-semibold text-slate-200 mb-4">
+            <i class="fa-solid fa-warehouse text-indigo-400 mr-2"></i>DC Workload Distributions
+          </h3>
+          <div class="space-y-4">
+            <template x-for="dcItem in getDcBreakdown()" :key="dcItem.dc">
+              <div>
+                <div class="flex justify-between items-center text-xs mb-1.5">
+                  <span class="font-medium text-slate-200" x-text="dcItem.dc"></span>
+                  <span class="text-slate-400">
+                    <span class="text-indigo-400 font-bold" x-text="dcItem.tasks"></span> Tasks 
+                    (<span x-text="dcItem.taskPercentage + '%'"></span>) 
+                    • 
+                    <span class="text-emerald-400 font-bold" x-text="'₹' + formatNumber(dcItem.earnings)"></span>
+                  </span>
+                </div>
+                <div class="w-full bg-slate-800 rounded-full h-2 overflow-hidden border border-slate-700">
+                  <div class="bg-gradient-to-r from-indigo-500 to-indigo-400 h-full rounded-full transition-all duration-500" :style="'width: ' + dcItem.taskPercentage + '%'"></div>
+                </div>
+              </div>
+            </template>
+            <template x-if="getDcBreakdown().length === 0">
+              <div class="text-center text-slate-500 text-xs py-8">
+                <i class="fa-solid fa-industry text-slate-700 text-3xl mb-2"></i>
+                <p>No distribution center data found for this month.</p>
+              </div>
+            </template>
+          </div>
+        </div>
+      </section>
+    </div>
+
+    <!-- ============================================== -->
+    <!-- 2. SEARCHABLE WISHMASTER DIRECTORY -->
+    <!-- ============================================== -->
+    <div x-show="currentView === 'wishmasters'" class="space-y-6" x-transition>
+      
+      <!-- Directory Search Header -->
+      <div class="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
+        <div>
+          <h2 class="text-lg font-bold text-white flex items-center">
+            <i class="fa-solid fa-users text-indigo-400 mr-2"></i>
+            Wishmaster Directory
+          </h2>
+          <p class="text-xs text-slate-400">Click any agent's card to load their detailed performance dashboard and payout data.</p>
+        </div>
+        <div class="relative w-full sm:w-80">
+          <span class="absolute inset-y-0 left-0 pl-3 flex items-center text-slate-500">
+            <i class="fa-solid fa-magnifying-glass text-xs"></i>
+          </span>
+          <input type="text" x-model="searchQuery" placeholder="Search by name, ID, or DC..." 
+                 class="bg-slate-800/50 border border-slate-700 rounded-xl pl-9 pr-3 py-2 text-xs text-slate-200 outline-none focus:border-indigo-500 focus:ring-1 focus:ring-indigo-500 transition w-full shadow-lg">
+        </div>
+      </div>
+
+      <!-- Agent Cards Grid -->
+      <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-6">
+        <template x-for="agent in filteredAgentsList()" :key="agent.name">
+          <div @click="selectedWishmaster = agent.name; currentView = 'detail'; applyFilters();"
+               class="glass p-4 rounded-xl relative overflow-hidden group hover:border-indigo-500/50 cursor-pointer transition duration-300 shadow-lg hover:shadow-indigo-500/10 flex flex-col justify-between">
+            
+            <!-- Card Header -->
+            <div class="flex items-center space-x-3 mb-3">
+              <div class="h-9 w-9 rounded-lg bg-indigo-500/10 border border-indigo-500/30 flex items-center justify-center text-indigo-400 font-bold text-xs group-hover:bg-indigo-600 group-hover:text-white transition duration-200" 
+                   x-text="agent.name.split(' ').map(n => n[0]).join('').substring(0,2)"></div>
+              <div>
+                <h4 class="text-xs font-bold text-white group-hover:text-indigo-400 transition" x-text="agent.name"></h4>
+                <p class="text-[9px] text-slate-400 font-mono" x-text="agent.id + ' • ' + (agent.dc || 'N/A')"></p>
+              </div>
+            </div>
+            
+            <!-- Stats Summary Panel -->
+            <div class="grid grid-cols-3 gap-2 bg-slate-900/40 p-2.5 rounded-xl border border-slate-800/80 mb-3 text-center">
+              <div>
+                <span class="block text-[8px] text-slate-400 uppercase font-semibold">MTD Earnings</span>
+                <span class="text-xs font-extrabold text-indigo-400" x-text="'₹' + formatNumber(agent.earnings)"></span>
+              </div>
+              <div class="border-l border-slate-800/60">
+                <span class="block text-[8px] text-slate-400 uppercase font-semibold">Delivered</span>
+                <span class="text-xs font-bold text-sky-400" x-text="agent.delivered"></span>
+              </div>
+              <div class="border-l border-slate-800/60">
+                <span class="block text-[8px] text-slate-400 uppercase font-semibold">Picked Up</span>
+                <span class="text-xs font-bold text-amber-400" x-text="agent.pickedUp"></span>
+              </div>
+            </div>
+
+            <!-- Conversion Indicators -->
+            <div class="grid grid-cols-2 gap-3 text-[10px] mb-3">
+              <div>
+                <div class="flex justify-between items-center mb-0.5">
+                  <span class="text-slate-400 flex items-center"><i class="fa-solid fa-truck text-sky-400 mr-1 text-[8px]"></i>Del: <span class="font-semibold text-sky-400 ml-1" x-text="agent.deliveryConversion + '%'"></span></span>
+                </div>
+                <div class="w-full bg-slate-800 rounded-full h-1 overflow-hidden border border-slate-700">
+                  <div class="bg-sky-400 h-full" :style="'width: ' + agent.deliveryConversion + '%'"></div>
+                </div>
+              </div>
+
+              <div>
+                <div class="flex justify-between items-center mb-0.5">
+                  <span class="text-slate-400 flex items-center"><i class="fa-solid fa-box text-amber-400 mr-1 text-[8px]"></i>Pick: <span class="font-semibold text-amber-400 ml-1" x-text="agent.pickupConversion + '%'"></span></span>
+                </div>
+                <div class="w-full bg-slate-800 rounded-full h-1 overflow-hidden border border-slate-700">
+                  <div class="bg-amber-400 h-full" :style="'width: ' + agent.pickupConversion + '%'"></div>
+                </div>
+              </div>
+            </div>
+
+            <!-- Action label -->
+            <div class="pt-2 border-t border-slate-800/50 flex justify-between items-center text-[9px] text-indigo-400 font-semibold group-hover:text-indigo-300">
+              <span>View Detailed Dashboard</span>
+              <i class="fa-solid fa-arrow-right group-hover:translate-x-1 transition duration-200"></i>
+            </div>
+          </div>
+        </template>
+      </div>
+      
+      <!-- Empty State -->
+      <div x-show="filteredAgentsList().length === 0" class="glass rounded-2xl p-12 text-center max-w-md mx-auto my-12" x-transition>
+        <i class="fa-solid fa-users-slash text-slate-700 text-4xl mb-4 animate-pulse"></i>
+        <h3 class="text-sm font-semibold text-white">No active Wishmasters found</h3>
+        <p class="text-xs text-slate-400 mt-2">Try clearing or changing your search phrase or month selection.</p>
+      </div>
+    </div>
+
+    <!-- ============================================== -->
+    <!-- 3. DETAILED INDIVIDUAL DASHBOARD -->
+    <!-- ============================================== -->
+    <div x-show="currentView === 'detail'" class="space-y-6">
+      
+      <!-- Back Button & Banner -->
+      <div class="flex flex-col sm:flex-row sm:items-center justify-between gap-4 border-b border-slate-800/80 pb-4">
+        <button @click="currentView = 'wishmasters'" class="px-4 py-2 bg-slate-800/80 hover:bg-slate-700/85 text-slate-200 rounded-xl text-xs font-semibold border border-slate-700 transition flex items-center space-x-2 w-fit">
+          <i class="fa-solid fa-arrow-left"></i>
+          <span>← Back to Directory</span>
+        </button>
+        <div class="text-left sm:text-right">
+          <h2 class="text-md font-bold text-white flex items-center sm:justify-end space-x-2">
+            <span x-text="selectedWishmaster"></span>
+            <span class="text-[10px] bg-indigo-500/10 text-indigo-400 px-2.5 py-0.5 rounded-full border border-indigo-500/20 font-semibold">Active Agent Profile</span>
+            <template x-if="selectedWishmaster !== '' && totals.unpaid === 0">
+              <span class="inline-flex items-center px-2.5 py-0.5 rounded-full text-[10px] font-semibold bg-emerald-500/10 text-emerald-400 border border-emerald-500/20 shadow-sm shadow-emerald-500/5">
+                <i class="fa-solid fa-circle-check mr-1.5"></i> Paid
+              </span>
+            </template>
+            <template x-if="selectedWishmaster !== '' && totals.unpaid > 0">
+              <span class="inline-flex items-center px-2.5 py-0.5 rounded-full text-[10px] font-semibold bg-rose-500/10 text-rose-400 border border-rose-500/20 shadow-sm shadow-rose-500/5">
+                <i class="fa-solid fa-circle-xmark mr-1.5"></i> Pending
+              </span>
+            </template>
+            <template x-if="selectedWishmaster !== '' && totals.unpaid > 0">
+              <button @click="openBulkConfirmModal()" class="px-4 py-2 bg-gradient-to-r from-emerald-600 to-emerald-500 hover:from-emerald-500 hover:to-emerald-400 text-white rounded-xl text-xs font-bold shadow-lg shadow-emerald-600/20 transition hover:scale-105 active:scale-95 duration-150 flex items-center space-x-2">
+                <i class="fa-solid fa-credit-card"></i>
+                <span x-text="'Pay Monthly Total (₹' + formatNumber(totals.unpaid) + ')'"></span>
+              </button>
+            </template>
+          </h2>
+          <p class="text-[10px] text-slate-400" x-text="'Viewing detailed performance for ' + (selectedMonth === 'All' ? 'all months' : selectedMonth)"></p>
+        </div>
+      </div>
+
+      <!-- Landing Placeholder when selectedWishmaster is empty -->
+      <div x-show="selectedWishmaster === ''" class="glass rounded-2xl p-12 text-center max-w-xl mx-auto shadow-2xl border border-slate-800/80 my-12" x-transition>
+        <div class="inline-flex items-center justify-center bg-indigo-600/10 p-5 rounded-full border border-indigo-500/20 text-indigo-400 text-4xl mb-6 shadow-lg shadow-indigo-600/5">
+          <i class="fa-solid fa-user-check"></i>
+        </div>
+        <h2 class="text-xl font-bold text-white mb-3">Select a Wishmaster to View Analytics</h2>
+        <p class="text-sm text-slate-400 leading-relaxed max-w-md mx-auto mb-6">
+          Please select an individual Wishmaster from the directory list above to unlock their earnings dashboard, conversion rates, daily work logs, and payment statuses.
+        </p>
+        <button @click="currentView = 'wishmasters'" class="px-4 py-2 bg-indigo-600 hover:bg-indigo-500 text-white rounded-xl text-xs font-semibold shadow transition">
+          Go to Directory
+        </button>
+      </div>
+
+      <!-- Detailed statistics & charts wrapper -->
+      <div x-show="selectedWishmaster !== ''" class="space-y-6">
+        <!-- Top KPI Cards -->
+        <section class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-6">
+        
+          <!-- Card 1: Total Earnings -->
+          <div class="glass p-6 rounded-2xl relative overflow-hidden group hover:border-slate-700 transition duration-300 shadow-md">
+            <div class="absolute -right-4 -bottom-4 text-indigo-500/10 text-8xl group-hover:scale-110 transition duration-300 font-bold">₹</div>
+            <div class="flex justify-between items-start">
+              <div>
+                <p class="text-xs font-semibold uppercase tracking-wider text-slate-400">Total Earnings</p>
+                <p class="text-3xl font-extrabold text-indigo-400 mt-2" x-text="'₹' + formatNumber(totals.earnings)"></p>
+              </div>
+              <div class="bg-indigo-500/10 text-indigo-400 p-2.5 rounded-xl border border-indigo-500/20">
+                <i class="fa-solid fa-indian-rupee-sign text-md"></i>
+              </div>
+            </div>
+          </div>
+
+          <!-- Card 2: Paid Payout progress -->
+          <div class="glass p-6 rounded-2xl relative overflow-hidden group hover:border-slate-700 transition duration-300 shadow-md">
+            <div class="absolute -right-4 -bottom-4 text-emerald-500/10 text-8xl group-hover:scale-110 transition duration-300">
+              <i class="fa-solid fa-circle-check"></i>
+            </div>
+            <div class="flex justify-between items-start">
+              <div>
+                <p class="text-xs font-semibold uppercase tracking-wider text-slate-400">Paid Payout</p>
+                <p class="text-3xl font-extrabold text-emerald-400 mt-2" x-text="'₹' + formatNumber(totals.paid)"></p>
+              </div>
+              <div class="bg-emerald-500/10 text-emerald-400 p-2.5 rounded-xl border border-emerald-500/20">
+                <i class="fa-solid fa-wallet text-md"></i>
+              </div>
+            </div>
+            <span class="text-[10px] font-medium text-slate-400 mt-3 block flex justify-between">
+              <span x-text="'Remaining unpaid: ₹' + formatNumber(totals.unpaid)"></span>
+              <span class="text-emerald-400 font-semibold" x-text="totals.payoutProgress + '% Paid'"></span>
+            </span>
+          </div>
+
+          <!-- Card 3: Avg Delivery Conversion -->
+          <div class="glass p-6 rounded-2xl relative overflow-hidden group hover:border-slate-700 transition duration-300 shadow-md">
+            <div class="absolute -right-4 -bottom-4 text-sky-500/10 text-8xl group-hover:scale-110 transition duration-300">
+              <i class="fa-solid fa-truck-ramp-box"></i>
+            </div>
+            <div class="flex justify-between items-start">
+              <div>
+                <p class="text-xs font-semibold uppercase tracking-wider text-slate-400">Avg Delivery Conv.</p>
+                <p class="text-3xl font-extrabold text-sky-400 mt-2" x-text="totals.delConversion + '%'"></p>
+              </div>
+              <div class="bg-sky-500/10 text-sky-400 p-2.5 rounded-xl border border-sky-500/20">
+                <i class="fa-solid fa-truck text-md"></i>
+              </div>
+            </div>
+          </div>
+
+          <!-- Card 4: Avg Pickup Conversion -->
+          <div class="glass p-6 rounded-2xl relative overflow-hidden group hover:border-slate-700 transition duration-300 shadow-md">
+            <div class="absolute -right-4 -bottom-4 text-amber-500/10 text-8xl group-hover:scale-110 transition duration-300">
+              <i class="fa-solid fa-box-open"></i>
+            </div>
+            <div class="flex justify-between items-start">
+              <div>
+                <p class="text-xs font-semibold uppercase tracking-wider text-slate-400">Avg Pickup Conv.</p>
+                <p class="text-3xl font-extrabold text-amber-400 mt-2" x-text="totals.pickConversion + '%'"></p>
+              </div>
+              <div class="bg-amber-500/10 text-amber-400 p-2.5 rounded-xl border border-amber-500/20">
+                <i class="fa-solid fa-box text-md"></i>
+              </div>
+            </div>
+          </div>
+        </section>
+
+        <!-- New Prominent Task Workload Summary Banner -->
+        <div class="glass p-6 rounded-2xl shadow-lg border border-slate-800/60">
+          <h3 class="text-sm font-semibold text-slate-200 mb-4"><i class="fa-solid fa-boxes-stacked text-indigo-400 mr-2"></i>Task Workload & Conversion Metrics</h3>
+          <div class="grid grid-cols-1 md:grid-cols-3 gap-6 divide-y md:divide-y-0 md:divide-x divide-slate-800/60">
+            <!-- 1. Delivery Summary -->
+            <div class="space-y-3 pr-2">
+              <span class="text-[10px] uppercase font-bold tracking-wider text-sky-400 block"><i class="fa-solid fa-truck mr-1.5"></i>Delivery Packets</span>
+              <div class="flex items-baseline space-x-2">
+                <span class="text-3xl font-extrabold text-white" x-text="totals.delivered"></span>
+                <span class="text-slate-500 text-xs" x-text="'/ ' + totals.ofd + ' Target'"></span>
+              </div>
+              <div class="w-full bg-slate-800 rounded-full h-2 overflow-hidden border border-slate-700">
+                <div class="bg-gradient-to-r from-sky-500 to-sky-400 h-2 rounded-full" :style="'width: ' + Math.min(totals.delConversion, 100) + '%'"></div>
+              </div>
+              <span class="text-[10px] font-semibold text-sky-400 block" x-text="totals.delConversion + '% Conversion Rate'"></span>
+            </div>
+            <!-- 2. Pickup Summary -->
+            <div class="space-y-3 md:pl-6 pr-2">
+              <span class="text-[10px] uppercase font-bold tracking-wider text-amber-400 block"><i class="fa-solid fa-box mr-1.5"></i>Completed Pickups</span>
+              <div class="flex items-baseline space-x-2">
+                <span class="text-3xl font-extrabold text-white" x-text="totals.pickedUp"></span>
+                <span class="text-slate-500 text-xs" x-text="'/ ' + totals.ofp + ' Target'"></span>
+              </div>
+              <div class="w-full bg-slate-800 rounded-full h-2 overflow-hidden border border-slate-700">
+                <div class="bg-gradient-to-r from-amber-500 to-amber-400 h-2 rounded-full" :style="'width: ' + Math.min(totals.pickConversion, 100) + '%'"></div>
+              </div>
+              <span class="text-[10px] font-semibold text-amber-400 block" x-text="totals.pickConversion + '% Conversion Rate'"></span>
+            </div>
+            <!-- 3. Combined Performance -->
+            <div class="space-y-3 md:pl-6">
+              <span class="text-[10px] uppercase font-bold tracking-wider text-indigo-400 block"><i class="fa-solid fa-list-check mr-1.5"></i>Combined Workload</span>
+              <div class="flex items-baseline space-x-2">
+                <span class="text-3xl font-extrabold text-indigo-400" x-text="totals.tasks"></span>
+                <span class="text-slate-500 text-xs" x-text="'/ ' + (totals.ofd + totals.ofp) + ' Combined Target'"></span>
+              </div>
+              <!-- Combined Deliveries vs Pickups Balance Bar -->
+              <div class="w-full bg-slate-800 rounded-full h-2 overflow-hidden border border-slate-700 flex">
+                <div class="bg-sky-400 h-2" :style="'width: ' + (totals.tasks > 0 ? (totals.delivered / totals.tasks) * 100 : 50) + '%'"></div>
+                <div class="bg-amber-400 h-2 flex-1"></div>
+              </div>
+              <div class="flex justify-between text-[9px] text-slate-400">
+                <span>Deliveries (<span x-text="totals.tasks > 0 ? Math.round((totals.delivered / totals.tasks) * 100) : 0"></span>%)</span>
+                <span>Pickups (<span x-text="totals.tasks > 0 ? Math.round((totals.pickedUp / totals.tasks) * 100) : 0"></span>%)</span>
+              </div>
+            </div>
+          </div>
+        </div>   </div>
+        </section>
+
+        <!-- Visual Charts Section -->
+        <section class="grid grid-cols-1 gap-6">
+          
+          <!-- Chart A: Redesigned Full-Width Trend Chart -->
+          <div class="glass p-6 rounded-2xl shadow-lg flex flex-col justify-between">
+            <div class="flex items-center justify-between mb-4">
+              <div>
+                <h3 class="text-sm font-semibold text-slate-200"><i class="fa-solid fa-chart-line text-indigo-400 mr-2"></i>Daily Earnings Trend</h3>
+                <p class="text-[10px] text-slate-400">Visualizes chronological daily payout earnings</p>
+              </div>
+              <div class="flex space-x-2 text-[10px] bg-slate-800/80 px-2.5 py-1.5 rounded-lg border border-slate-700 font-medium">
+                <span class="flex items-center"><span class="w-2 h-2 rounded-full bg-indigo-500 mr-1"></span>Daily Earnings (₹)</span>
+              </div>
+            </div>
+            <div class="h-[280px] w-full relative">
+              <canvas id="trendsChart"></canvas>
+            </div>
+          </div>
+        </section>
+
+        <!-- Daily Log Database Table -->
+        <section class="glass rounded-2xl overflow-hidden shadow-xl border border-slate-800/80">
+          
+          <!-- Table Header & Controls -->
+          <div class="px-6 py-4 border-b border-slate-800/60 flex items-center justify-between flex-wrap gap-4 bg-slate-900/30">
+            <div>
+              <h3 class="text-sm font-bold text-white"><i class="fa-solid fa-list-check text-indigo-400 mr-2"></i>Wishmaster Daily Logs</h3>
+              <p class="text-[10px] text-slate-400">Detailed transactions and delivery conversion rates. Click Wishmaster's name to view profile.</p>
+            </div>
+            <div class="flex items-center space-x-3 text-xs flex-wrap gap-2">
+              <div class="text-slate-400 bg-slate-800 px-3 py-1.5 rounded-xl border border-slate-700 mr-1">
+                Filtered: <span class="text-white font-semibold" x-text="filteredData.length"></span> / <span class="text-slate-400" x-text="sheetData.length"></span> rows
+              </div>
+              <button @click="downloadDailyPDF()" class="px-3 py-1.5 bg-indigo-600 hover:bg-indigo-500 text-white rounded-xl text-xs font-bold transition hover:scale-105 active:scale-95 duration-150 flex items-center space-x-1.5 shadow-lg shadow-indigo-600/10">
+                <i class="fa-solid fa-file-pdf text-[10px]"></i>
+                <span>Download PDF</span>
+              </button>
+              <button @click="downloadDailyCSV()" class="px-3 py-1.5 bg-slate-800 hover:bg-slate-700 text-slate-200 border border-slate-700 rounded-xl text-xs font-bold transition hover:scale-105 active:scale-95 duration-150 flex items-center space-x-1.5">
+                <i class="fa-solid fa-file-csv text-[10px]"></i>
+                <span>Download CSV</span>
+              </button>
+            </div>
+          </div>
+
+          <!-- Main Log Table -->
+          <div class="overflow-x-auto">
+            <table class="w-full text-left border-collapse">
+              <thead>
+                <tr class="text-slate-400 text-[10px] uppercase font-bold tracking-wider border-b border-slate-800 bg-slate-950/40">
+                  <th class="p-4 cursor-pointer hover:text-indigo-400 transition text-left" @click="sortBy('date')">
+                    Date 
+                    <i class="fa-solid" :class="sortKey === 'date' ? (sortAsc ? 'fa-sort-up ml-1 text-indigo-400' : 'fa-sort-down ml-1 text-indigo-400') : 'fa-sort ml-1 text-slate-600'"></i>
+                  </th>
+                  <th class="p-4 cursor-pointer hover:text-indigo-400 transition text-left" @click="sortBy('name')">
+                    Wishmaster Name & ID
+                    <i class="fa-solid" :class="sortKey === 'name' ? (sortAsc ? 'fa-sort-up ml-1 text-indigo-400' : 'fa-sort-down ml-1 text-indigo-400') : 'fa-sort ml-1 text-slate-600'"></i>
+                  </th>
+                  <th class="p-4 text-left">Del. Completed/Total</th>
+                  <th class="p-4 cursor-pointer hover:text-indigo-400 transition text-left" @click="sortBy('deliveryConversion')">
+                    Del. Conversion %
+                    <i class="fa-solid" :class="sortKey === 'deliveryConversion' ? (sortAsc ? 'fa-sort-up ml-1 text-indigo-400' : 'fa-sort-down ml-1 text-indigo-400') : 'fa-sort ml-1 text-slate-600'"></i>
+                  </th>
+                  <th class="p-4 text-left">Pick. Completed/Total</th>
+                  <th class="p-4 cursor-pointer hover:text-indigo-400 transition text-left" @click="sortBy('pickupConversion')">
+                    Pick. Conversion %
+                    <i class="fa-solid" :class="sortKey === 'pickupConversion' ? (sortAsc ? 'fa-sort-up ml-1 text-indigo-400' : 'fa-sort-down ml-1 text-indigo-400') : 'fa-sort ml-1 text-slate-600'"></i>
+                  </th>
+                  <th class="p-4 cursor-pointer hover:text-indigo-400 transition text-left" @click="sortBy('earnings')">
+                    Daily Earning
+                    <i class="fa-solid" :class="sortKey === 'earnings' ? (sortAsc ? 'fa-sort-up ml-1 text-indigo-400' : 'fa-sort-down ml-1 text-indigo-400') : 'fa-sort ml-1 text-slate-600'"></i>
+                  </th>
+                </tr>
+              </thead>
+              <tbody class="divide-y divide-slate-800/60 text-xs text-slate-200">
+                <template x-for="row in filteredData" :key="row.rowIndex">
+                  <tr class="hover:bg-slate-800/30 transition border-b border-slate-800/40">
+                    <td class="p-4 font-mono text-slate-400" x-text="row.date"></td>
+                    <td class="p-4">
+                      <div class="flex items-center space-x-3 cursor-pointer group" @click="openAgentProfile(row)">
+                        <div class="h-8 w-8 rounded-full bg-indigo-500/10 border border-indigo-500/30 flex items-center justify-center text-indigo-400 font-bold text-xs group-hover:bg-indigo-600 group-hover:text-white transition duration-200" 
+                             x-text="row.name.split(' ').map(n => n[0]).join('').substring(0,2)"></div>
+                        <div class="flex flex-col">
+                          <span class="font-medium text-slate-200 group-hover:text-indigo-400 transition duration-200" x-text="row.name"></span>
+                          <span class="text-[10px] text-slate-500 font-mono" x-text="row.id + ' • ' + row.dc"></span>
+                        </div>
+                      </div>
+                    </td>
+                    <td class="p-4">
+                      <div class="flex items-center space-x-1.5 justify-start">
+                        <input type="number" 
+                               :value="row.delivered"
+                               @change="submitInlineEdit(row.rowIndex, 'del_update', $event.target.value)"
+                               class="w-12 text-center bg-slate-950/60 hover:bg-slate-900 border border-slate-800 hover:border-slate-750 focus:border-indigo-500 focus:ring-1 focus:ring-indigo-500/30 text-white font-bold text-xs rounded px-1.5 py-0.5 outline-none transition duration-150 [appearance:textfield] [&::-webkit-outer-spin-button]:appearance-none [&::-webkit-inner-spin-button]:appearance-none"
+                               title="Click to edit Delivered Completed count">
+                        <span class="text-slate-500 text-[10px] select-none">/</span>
+                        <input type="number" 
+                               :value="row.ofd"
+                               @change="submitInlineEdit(row.rowIndex, 'ofd', $event.target.value)"
+                               class="w-12 text-center bg-slate-950/40 hover:bg-slate-900 border border-slate-800 hover:border-slate-750 focus:border-indigo-500 focus:ring-1 focus:ring-indigo-500/30 text-slate-400 font-medium text-xs rounded px-1.5 py-0.5 outline-none transition duration-150 [appearance:textfield] [&::-webkit-outer-spin-button]:appearance-none [&::-webkit-inner-spin-button]:appearance-none"
+                               title="Click to edit Out for Delivery count">
+                      </div>
+                    </td>
+                    <td class="p-4">
+                      <div class="flex items-center space-x-2">
+                        <div class="w-16 bg-slate-800 rounded-full h-1.5 overflow-hidden border border-slate-700">
+                          <div class="bg-sky-400 h-1.5 rounded-full" :style="'width: ' + Math.min(row.deliveryConversion, 100) + '%'"></div>
+                        </div>
+                        <span class="font-semibold text-xs text-sky-400 w-12 text-right" x-text="row.deliveryConversion.toFixed(1) + '%'"></span>
+                      </div>
+                    </td>
+                    <td class="p-4">
+                      <div class="flex items-center space-x-1.5 justify-start">
+                        <input type="number" 
+                               :value="row.pickedUp"
+                               @change="submitInlineEdit(row.rowIndex, 'picked-up', $event.target.value)"
+                               class="w-12 text-center bg-slate-950/60 hover:bg-slate-900 border border-slate-800 hover:border-slate-750 focus:border-indigo-500 focus:ring-1 focus:ring-indigo-500/30 text-white font-bold text-xs rounded px-1.5 py-0.5 outline-none transition duration-150 [appearance:textfield] [&::-webkit-outer-spin-button]:appearance-none [&::-webkit-inner-spin-button]:appearance-none"
+                               title="Click to edit Pickups Completed count">
+                        <span class="text-slate-500 text-[10px] select-none">/</span>
+                        <input type="number" 
+                               :value="row.ofp"
+                               @change="submitInlineEdit(row.rowIndex, 'ofp', $event.target.value)"
+                               class="w-12 text-center bg-slate-950/40 hover:bg-slate-900 border border-slate-800 hover:border-slate-750 focus:border-indigo-500 focus:ring-1 focus:ring-indigo-500/30 text-slate-400 font-medium text-xs rounded px-1.5 py-0.5 outline-none transition duration-150 [appearance:textfield] [&::-webkit-outer-spin-button]:appearance-none [&::-webkit-inner-spin-button]:appearance-none"
+                               title="Click to edit Out for Pickup count">
+                      </div>
+                    </td>
+                    <td class="p-4">
+                      <div class="flex items-center space-x-2">
+                        <div class="w-16 bg-slate-800 rounded-full h-1.5 overflow-hidden border border-slate-700">
+                          <div class="bg-amber-400 h-1.5 rounded-full" :style="'width: ' + Math.min(row.pickupConversion, 100) + '%'"></div>
+                        </div>
+                        <span class="font-semibold text-xs text-amber-400 w-12 text-right" x-text="row.pickupConversion.toFixed(1) + '%'"></span>
+                      </div>
+                    </td>
+                    <td class="p-4 font-bold text-indigo-300" x-text="'₹' + formatNumber(row.earnings)"></td>
+                  </tr>
+                </template>
+                <template x-if="filteredData.length === 0">
+                  <tr>
+                    <td colspan="7" class="p-12 text-center text-slate-400">
+                      <i class="fa-solid fa-folder-open text-4xl mb-3 text-slate-700 block animate-pulse"></i>
+                      <span class="font-semibold block text-white text-sm">No transaction records found</span>
+                      <span class="text-xs text-slate-500 block mt-1">Try modifying your selection or filters.</span>
+                    </td>
+                  </tr>
+                </template>
+              </tbody>
+            </table>
+          </div>
+        </section>
+      </div>
+    </div>
+  </main>
+
+  <!-- MODAL: Bulk Payout Confirmation Dialog -->
+  <div x-show="showBulkConfirmModal" class="fixed inset-0 z-50 flex items-center justify-center p-4 bg-slate-950/80 backdrop-blur-sm no-print" x-transition>
+    <div class="glass max-w-md w-full rounded-2xl overflow-hidden shadow-2xl p-6 border border-slate-700" @click.away="showBulkConfirmModal = false">
+      <div class="flex items-center space-x-3 text-emerald-400 mb-4">
+        <div class="bg-emerald-500/10 p-2.5 rounded-xl border border-emerald-500/20">
+          <i class="fa-solid fa-credit-card text-xl animate-pulse"></i>
+        </div>
+        <div>
+          <h4 class="text-md font-bold text-white">Confirm Payout</h4>
+          <p class="text-[10px] text-slate-400">Verifying administrative payout release</p>
+        </div>
+      </div>
+      
+      <p class="text-xs text-slate-300 leading-relaxed">
+        Are you sure you want to mark the total unpaid payout of <strong class="text-emerald-400 text-sm" x-text="'₹' + formatNumber(totals.unpaid)"></strong> 
+        across <strong class="text-white font-semibold" x-text="unpaidRowIndexes.length"></strong> pending transactions for 
+        <strong class="text-white font-semibold" x-text="selectedWishmaster"></strong> as <strong class="text-emerald-400 font-bold text-xs uppercase tracking-wide">PAID</strong>?
+      </p>
+
+      <div class="mt-4 p-3 bg-slate-900/60 rounded-xl border border-slate-800/80 text-[10px] text-slate-400">
+        <i class="fa-solid fa-info-circle mr-1 text-slate-500"></i> Clicking confirm will write <strong class="text-slate-300 font-semibold">"Paid"</strong> into the Payment Status column (column 10) for all these rows in the Google Spreadsheet.
+      </div>
+      
+      <div class="mt-6 flex justify-end space-x-3">
+        <button @click="showBulkConfirmModal = false" class="px-4 py-2 border border-slate-700 text-slate-300 rounded-xl text-xs font-semibold hover:bg-slate-800 transition duration-150">
+          Cancel
+        </button>
+        <button @click="confirmBulkPayment()" class="px-4 py-2 bg-gradient-to-r from-emerald-600 to-emerald-500 hover:from-emerald-500 hover:to-emerald-400 text-white rounded-xl text-xs font-semibold shadow-lg shadow-emerald-600/30 transition duration-150 flex items-center space-x-2">
+          <i class="fa-solid fa-spinner fa-spin" x-show="processing"></i>
+          <span x-text="processing ? 'Updating...' : 'Yes, Confirm Payout'"></span>
+        </button>
+      </div>
+    </div>
+  </div>
+
+  <!-- MODAL: Agent Profile Deep-Dive -->
+  <div x-show="showProfileModal" class="fixed inset-0 z-50 flex items-center justify-center p-4 bg-slate-950/80 backdrop-blur-sm no-print" x-transition>
+    <div class="glass max-w-3xl w-full rounded-2xl overflow-hidden shadow-2xl p-6 border border-slate-700/80 max-h-[85vh] flex flex-col justify-between" @click.away="showProfileModal = false">
+      
+      <!-- Top Header -->
+      <div class="flex items-center justify-between border-b border-slate-800 pb-4 mb-4">
+        <div class="flex items-center space-x-3">
+          <div class="h-11 w-11 rounded-xl bg-indigo-600 text-white flex items-center justify-center font-bold text-sm shadow-md"
+               x-text="selectedAgentProfile?.name.split(' ').map(n => n[0]).join('').substring(0, 2)"></div>
+          <div>
+            <h4 class="text-base font-bold text-white" x-text="selectedAgentProfile?.name"></h4>
+            <p class="text-[10px] text-slate-400 font-mono" x-text="'Agent ID: ' + selectedAgentProfile?.id + ' • Station: ' + (selectedAgentProfile?.dc || 'N/A')"></p>
+          </div>
+        </div>
+        <button @click="showProfileModal = false" class="text-slate-400 hover:text-white p-1">
+          <i class="fa-solid fa-xmark text-lg"></i>
+        </button>
+      </div>
+
+      <!-- Main statistics summary -->
+      <div class="grid grid-cols-1 sm:grid-cols-3 gap-4 mb-5">
+        <!-- Earnings box -->
+        <div class="bg-indigo-950/20 border border-indigo-900/30 p-3 rounded-xl">
+          <span class="text-[10px] text-slate-400 font-semibold uppercase block">Earnings Summary</span>
+          <span class="text-lg font-bold text-indigo-400 block mt-1" x-text="'₹' + formatNumber(selectedAgentProfile?.earnings || 0)"></span>
+          <span class="text-[9px] text-slate-400 block" x-text="'Paid: ₹' + formatNumber(selectedAgentProfile?.paid || 0) + ' • Unpaid: ₹' + formatNumber(selectedAgentProfile?.unpaid || 0)"></span>
+        </div>
+        <!-- Delivery conv -->
+        <div class="bg-sky-950/20 border border-sky-900/30 p-3 rounded-xl">
+          <span class="text-[10px] text-slate-400 font-semibold uppercase block">Delivery Conversion</span>
+          <span class="text-lg font-bold text-sky-400 block mt-1" x-text="(selectedAgentProfile?.avgDelConv || '0.0') + '%'"></span>
+          <span class="text-[9px] text-slate-400 block">Total tasks: <span class="font-bold text-slate-300" x-text="selectedAgentProfile?.totalTasks"></span></span>
+        </div>
+        <!-- Pickup conv -->
+        <div class="bg-amber-950/20 border border-amber-900/30 p-3 rounded-xl">
+          <span class="text-[10px] text-slate-400 font-semibold uppercase block">Pickup Conversion</span>
+          <span class="text-lg font-bold text-amber-400 block mt-1" x-text="(selectedAgentProfile?.avgPickConv || '0.0') + '%'"></span>
+          <span class="text-[9px] text-slate-400 block">System calculated</span>
+        </div>
+      </div>
+
+      <!-- Agent transaction log subtable -->
+      <div class="flex-1 overflow-y-auto mb-4 border border-slate-800/80 rounded-xl bg-slate-950/30">
+        <table class="w-full text-left border-collapse text-[11px]">
+          <thead>
+            <tr class="bg-slate-900 border-b border-slate-800 text-slate-400 font-bold uppercase tracking-wider sticky top-0 z-10">
+              <th class="p-3">Date</th>
+              <th class="p-3">Deliveries Completed</th>
+              <th class="p-3">Pickups Completed</th>
+              <th class="p-3">Earnings</th>
+              <th class="p-3 text-right">Status</th>
+            </tr>
+          </thead>
+          <tbody class="divide-y divide-slate-800/50 text-slate-200">
+            <template x-for="r in selectedAgentProfile?.rows" :key="r.rowIndex">
+              <tr class="hover:bg-slate-900/20">
+                <td class="p-3 font-mono text-slate-400" x-text="r.date"></td>
+                <td class="p-3" x-text="r.delivered + ' / ' + r.ofd + ' (' + r.deliveryConversion.toFixed(1) + '%)'"></td>
+                <td class="p-3" x-text="r.pickedUp + ' / ' + r.ofp + ' (' + r.pickupConversion.toFixed(1) + '%)'"></td>
+                <td class="p-3 font-semibold text-slate-300" x-text="'₹' + r.earnings"></td>
+                <td class="p-3 text-right">
+                  <template x-if="r.status === 'Paid'">
+                    <span class="text-emerald-400 font-semibold"><i class="fa-solid fa-circle-check"></i> Paid</span>
+                  </template>
+                  <template x-if="r.status !== 'Paid'">
+                    <span class="text-slate-500 font-semibold">Unpaid</span>
+                  </template>
+                </td>
+              </tr>
+            </template>
+          </tbody>
+        </table>
+      </div>
+
+      <!-- Close and print triggers -->
+      <div class="flex items-center justify-between border-t border-slate-800 pt-4">
+        <button @click="printAgentSlip()" class="px-4 py-2 bg-slate-800 hover:bg-slate-700 border border-slate-700 text-slate-300 rounded-xl text-xs font-semibold transition flex items-center space-x-2">
+          <i class="fa-solid fa-print"></i>
+          <span>Print Payslip</span>
+        </button>
+        <button @click="showProfileModal = false" class="px-4 py-2 bg-indigo-600 hover:bg-indigo-500 text-white rounded-xl text-xs font-semibold shadow transition">
+          Close Profile
+        </button>
+      </div>
+    </div>
+  </div>
+
+  <!-- Printable Slip Container (Visible only in print mode) -->
+  <div id="printSlip" class="hidden print-area p-8 bg-white text-black font-sans">
+    <div class="border-b-2 border-slate-300 pb-4 mb-6 flex justify-between items-center">
+      <div>
+        <h1 class="text-2xl font-bold uppercase tracking-wide">Wishmaster Payout Payslip</h1>
+        <p class="text-sm text-gray-500">Performance & Remittance Invoice</p>
+      </div>
+      <div class="text-right">
+        <p class="text-sm font-semibold">Date of Report: <span x-text="new Date().toLocaleDateString('en-IN')"></span></p>
+        <p class="text-xs text-gray-500 font-mono">System-generated slip</p>
+      </div>
+    </div>
+
+    <!-- Agent & Workstation Info -->
+    <div class="grid grid-cols-2 gap-4 mb-6">
+      <div>
+        <p class="text-xs uppercase text-gray-400 font-bold">Wishmaster Details</p>
+        <p class="text-lg font-bold text-slate-900" x-text="selectedAgentProfile?.name"></p>
+        <p class="text-sm text-slate-600 font-mono">ID: <span x-text="selectedAgentProfile?.id"></span></p>
+      </div>
+      <div class="text-right">
+        <p class="text-xs uppercase text-gray-400 font-bold">Distribution Center</p>
+        <p class="text-lg font-bold text-slate-900" x-text="selectedAgentProfile?.dc || 'N/A'"></p>
+      </div>
+    </div>
+
+    <!-- Payout summary table -->
+    <table class="w-full text-left border-collapse mb-8">
+      <thead>
+        <tr class="bg-gray-100 text-xs font-bold uppercase text-gray-700 border-b border-gray-300">
+          <th class="p-3">Metric</th>
+          <th class="p-3 text-right">Value</th>
+        </tr>
+      </thead>
+      <tbody class="text-sm divide-y divide-gray-200">
+        <tr>
+          <td class="p-3">Total Tasks Done (Deliveries + Pickups)</td>
+          <td class="p-3 text-right font-semibold" x-text="selectedAgentProfile?.totalTasks"></td>
+        </tr>
+        <tr>
+          <td class="p-3">Average Delivery Conversion %</td>
+          <td class="p-3 text-right font-semibold" x-text="selectedAgentProfile?.avgDelConv + '%'"></td>
+        </tr>
+        <tr>
+          <td class="p-3">Average Pickup Conversion %</td>
+          <td class="p-3 text-right font-semibold" x-text="selectedAgentProfile?.avgPickConv + '%'"></td>
+        </tr>
+        <tr class="bg-gray-50 font-bold text-slate-900 border-t border-gray-300">
+          <td class="p-3 text-base">Total Earnings (₹13 per task)</td>
+          <td class="p-3 text-right text-base" x-text="'₹' + formatNumber(selectedAgentProfile?.earnings || 0)"></td>
+        </tr>
+        <tr class="text-emerald-700 font-semibold border-b border-gray-200">
+          <td class="p-3">Total Paid Amount</td>
+          <td class="p-3 text-right" x-text="'₹' + formatNumber(selectedAgentProfile?.paid || 0)"></td>
+        </tr>
+        <tr class="text-rose-700 font-semibold border-b border-gray-205">
+          <td class="p-3">Remaining Unpaid Amount</td>
+          <td class="p-3 text-right" x-text="'₹' + formatNumber(selectedAgentProfile?.unpaid || 0)"></td>
+        </tr>
+      </tbody>
+    </table>
+
+    <!-- Signature Block -->
+    <div class="grid grid-cols-2 gap-8 mt-12 pt-8 border-t border-gray-200">
+      <div>
+        <p class="text-xs uppercase text-gray-400 font-bold mb-8">Prepared By</p>
+        <div class="w-48 border-b border-gray-400"></div>
+        <p class="text-xs text-gray-500 mt-1">Authorized Administrator</p>
+      </div>
+      <div class="text-right">
+        <p class="text-xs uppercase text-gray-400 font-bold mb-8">Recipient Signature</p>
+        <div class="w-48 ml-auto border-b border-gray-400"></div>
+        <p class="text-xs text-gray-500 mt-1">Wishmaster Acknowledgement</p>
+      </div>
+    </div>
+  </div>
+
+  <!-- MODAL: Startup Month Selection -->
+  <div x-show="showInitialMonthModal" class="fixed inset-0 z-[110] flex items-center justify-center p-4 bg-slate-950/90 backdrop-blur-xl no-print" x-transition>
+    <div class="glass max-w-md w-full rounded-2xl overflow-hidden shadow-2xl p-6 border border-slate-700/60 flex flex-col justify-between">
+      
+      <!-- Icon & Header -->
+      <div class="flex items-center space-x-3 text-indigo-400 mb-4">
+        <div class="bg-indigo-500/10 p-3 rounded-xl border border-indigo-500/20">
+          <i class="fa-solid fa-calendar-check text-2xl animate-pulse"></i>
+        </div>
+        <div>
+          <h4 class="text-md font-bold text-white tracking-wide">Select Operating Month</h4>
+          <p class="text-[10px] text-slate-400">Initialize Monthly Wishmaster Dashboard</p>
+        </div>
+      </div>
+      
+      <!-- Description -->
+      <p class="text-xs text-slate-300 leading-relaxed mb-6">
+        Welcome to the **Wishmaster Payout Panel**. Please select the month you want to manage. On selection, the dashboard will fetch raw transaction logs and **automatically initialize the dedicated monthly tab** inside your administrative spreadsheet.
+      </p>
+
+      <!-- Dropdown Selector / Spinner -->
+      <div class="space-y-3 mb-6">
+        <label class="text-[10px] uppercase font-bold text-slate-400 block tracking-wider">Select Month:</label>
+        
+        <template x-if="loadingUniqueMonths">
+          <div class="flex items-center space-x-3 bg-slate-950/60 border border-slate-800 p-4 rounded-xl text-xs text-slate-300 shadow-inner">
+            <div class="relative w-5 h-5 flex items-center justify-center">
+              <div class="absolute inset-0 rounded-full border-2 border-indigo-500/20"></div>
+              <div class="absolute inset-0 rounded-full border-2 border-indigo-500 border-t-transparent animate-spin"></div>
+            </div>
+            <span class="font-medium animate-pulse">Syncing available months from ledger...</span>
+          </div>
+        </template>
+        
+        <template x-if="!loadingUniqueMonths">
+          <div class="relative">
+            <select x-model="selectedInitialMonth" 
+                    :disabled="processing"
+                    class="w-full bg-slate-950/60 border border-slate-800 focus:border-indigo-500 focus:ring-1 focus:ring-indigo-500/30 p-3 rounded-xl text-xs text-slate-200 font-semibold outline-none cursor-pointer appearance-none transition duration-150 disabled:opacity-50 disabled:cursor-not-allowed">
+              <option class="bg-slate-900 text-slate-400" value="">-- Click to Select Month --</option>
+              <template x-for="m in uniqueMonthsList" :key="m">
+                <option class="bg-slate-900 text-slate-200" :value="m" x-text="formatMonthYear(m)"></option>
+              </template>
+            </select>
+            <div class="absolute right-3.5 top-3.5 pointer-events-none text-slate-400 text-[10px]">
+              <i class="fa-solid fa-chevron-down"></i>
+            </div>
+          </div>
+        </template>
+      </div>
+      
+      <!-- Action Button -->
+      <div class="flex justify-end">
+        <button @click="confirmInitialMonth()" 
+                :disabled="loadingUniqueMonths || selectedInitialMonth === '' || processing"
+                class="w-full py-2.5 bg-gradient-to-r from-indigo-600 to-indigo-500 hover:from-indigo-500 hover:to-indigo-400 disabled:from-slate-800 disabled:to-slate-800 text-white disabled:text-slate-500 rounded-xl text-xs font-semibold shadow-lg shadow-indigo-600/20 disabled:shadow-none transition duration-150 flex items-center justify-center space-x-2">
+          <i class="fa-solid fa-circle-play text-[10px]" x-show="!processing"></i>
+          <i class="fa-solid fa-spinner fa-spin" x-show="processing"></i>
+          <span x-text="processing ? 'Initializing Month & Sheets...' : 'Access Payout Dashboard'"></span>
+        </button>
+      </div>
+      
+    </div>
+  </div>
+
+  <!-- JavaScript App Logic -->
+  <script>
+    function dashboardApp() {
+      return {
+        // Application States
+        loading: false,
+        processing: false,
+        showBulkConfirmModal: false,
+        showProfileModal: false,
+        showInitialMonthModal: true,
+        loadingUniqueMonths: true,
+        uniqueMonthsList: [],
+        selectedInitialMonth: '',
+
+        currentView: 'overview',
+        
+        // Data and Filters State
+        sheetData: [],
+        filteredData: [],
+        months: [],
+        uniqueWishmasters: [],
+        selectedMonth: 'All',
+        selectedWishmaster: '',
+        searchQuery: '',
+        
+        // Sorting State
+        sortKey: 'date',
+        sortAsc: false, // Default latest date first
+        
+        // Pagination State
+        currentPage: 1,
+        rowsPerPage: 8,
+
+        // Modal Specific states
+        unpaidRowIndexes: [],
+        selectedAgentProfile: null,
+        
+        // Chart handles
+        trendsChart: null,
+        progressChart: null,
+        
+        // Toast notifications
+        toasts: [],
+
+        // Aggregated totals
+        totals: {
+          earnings: 0,
+          paid: 0,
+          unpaid: 0,
+          tasks: 0,
+          delivered: 0,
+          pickedUp: 0,
+          ofd: 0,
+          ofp: 0,
+          delConversion: 0,
+          pickConversion: 0,
+          payoutProgress: 0
+        },
+
+        init() {
+          this.loadUniqueMonths();
+          
+          // Watch for filter/search variables to recalculate and redraw
+          this.$watch('selectedMonth', () => { this.currentPage = 1; this.applyFilters(); });
+          this.$watch('selectedWishmaster', () => { this.currentPage = 1; this.applyFilters(); });
+          this.$watch('searchQuery', () => { this.currentPage = 1; this.applyFilters(); });
+          this.$watch('currentView', (value) => {
+            if (value === 'detail') {
+              this.rebuildCharts();
+            }
+          });
+        },
+
+        loadUniqueMonths() {
+          this.loadingUniqueMonths = true;
+          
+
+          google.script.run
+            .withSuccessHandler(res => {
+              this.uniqueMonthsList = res || [];
+              if (this.uniqueMonthsList.length > 0) {
+                // Pre-select the latest month (last element) by default!
+                this.selectedInitialMonth = this.uniqueMonthsList[this.uniqueMonthsList.length - 1];
+              }
+              this.loadingUniqueMonths = false;
+            })
+            .withFailureHandler(err => {
+              console.error(err);
+              this.addToast("Failed to fetch months list: " + err.message, "error");
+              this.loadingUniqueMonths = false;
+            })
+            .getUniqueMonths();
+        },
+
+        confirmInitialMonth() {
+          if (!this.selectedInitialMonth) {
+            this.addToast("Please select a month to access the dashboard.", "error");
+            return;
+          }
+          
+          this.selectedMonth = this.selectedInitialMonth;
+          this.loading = true;
+          this.showInitialMonthModal = false;
+          
+          
+          // Real Google Apps Script Flow:
+          this.processing = true;
+          // 1. First trigger automatic tab creation if it doesn't exist yet!
+          google.script.run
+            .withSuccessHandler(res => {
+              if (res.success) {
+                // 2. Fetch full combined data (raw Agent_view + overlay)
+                google.script.run
+                  .withSuccessHandler(data => {
+                    this.sheetData = data;
+                    
+                    // Extract unique month keys from row.date (second date column from backend)
+                    const rawMonths = new Set();
+                    data.forEach(r => {
+                      if (r.date) {
+                        const parts = r.date.split('-');
+                        if (parts.length === 3) {
+                          rawMonths.add(`${parts[1]}-${parts[2]}`);
+                        }
+                      }
+                    });
+                    const mNames = ["jan", "feb", "mar", "apr", "may", "jun", "jul", "aug", "sep", "oct", "nov", "dec"];
+                    this.months = Array.from(rawMonths).sort((a, b) => {
+                      const partsA = a.split('-');
+                      const partsB = b.split('-');
+                      const yA = parseInt(partsA[1], 10);
+                      const yB = parseInt(partsB[1], 10);
+                      if (yA !== yB) return yA - yB;
+                      return mNames.indexOf(partsA[0].toLowerCase()) - mNames.indexOf(partsB[0].toLowerCase());
+                    });
+                    
+                    this.applyFilters();
+                    this.processing = false;
+                    this.loading = false;
+                    this.addToast(`Successfully initialized and loaded data for ${this.formatMonthYear(this.selectedMonth)}!`);
+                  })
+                  .withFailureHandler(err => {
+                    console.error(err);
+                    this.addToast("Failed to fetch spreadsheet data: " + err.message, "error");
+                    this.processing = false;
+                    this.loading = false;
+                    this.showInitialMonthModal = true;
+                  })
+                  .getSheetData();
+              } else {
+                this.addToast("Initialization Error: " + res.message, "error");
+                this.processing = false;
+                this.loading = false;
+                this.showInitialMonthModal = true;
+              }
+            })
+            .withFailureHandler(err => {
+              console.error(err);
+              this.addToast("Initialization Connection Error: " + err.message, "error");
+              this.processing = false;
+              this.loading = false;
+              this.showInitialMonthModal = true;
+            })
+            .prepareTempTabForMonth(this.selectedMonth);
+        },
+
+        // Converts any date string (DD-MM-YYYY or DD-MMM-YYYY or YYYY-MM-DD) to "mmm-yyyy" key
+        // and compares it against selectedMonth like "jun-2026".
+        dateMatchesMonth(dateStr, monthKey) {
+          if (!dateStr || !monthKey) return false;
+          const MONTH_ABBR = ["jan","feb","mar","apr","may","jun","jul","aug","sep","oct","nov","dec"];
+          const parts = dateStr.split(/[-\/]/);
+          if (parts.length !== 3) return false;
+          let year = '';
+          for (let i = 0; i < 3; i++) {
+            if (/^\d{4}$/.test(parts[i])) { year = parts[i]; break; }
+          }
+          if (!year) return false;
+          const monthPart = parts[1].toLowerCase();
+          const monthNum = parseInt(monthPart, 10);
+          let monthAbbr = '';
+          if (!isNaN(monthNum) && monthNum >= 1 && monthNum <= 12) {
+            monthAbbr = MONTH_ABBR[monthNum - 1];
+          } else {
+            monthAbbr = monthPart.substring(0, 3);
+          }
+          return `${monthAbbr}-${year}` === monthKey.toLowerCase();
+        },
+
+        formatMonthYear(myKey) {
+          if (!myKey || myKey === 'All' || myKey === 'Unknown') return myKey;
+          const parts = myKey.split('-');
+          if (parts.length === 2) {
+            const monthNames = ["January", "February", "March", "April", "May", "June", "July", "August", "September", "October", "November", "December"];
+            const monthsAbbr = ["jan", "feb", "mar", "apr", "may", "jun", "jul", "aug", "sep", "oct", "nov", "dec"];
+            
+            const monthIdx = monthsAbbr.indexOf(parts[0].toLowerCase());
+            if (monthIdx !== -1) {
+              return `${monthNames[monthIdx]} ${parts[1]}`;
+            }
+          }
+          return myKey;
+        },
+
+        refreshData() {
+          this.loading = true;
+          
+          if (typeof google === 'undefined') {
+            console.error("Google Apps Script context not found.");
+            this.handleDataResponse([]);
+            this.addToast("Connection Error: Open this dashboard inside Google Sheets.", "error");
+            this.loading = false;
+            return;
+          }
+
+          google.script.run
+            .withSuccessHandler(data => {
+              this.handleDataResponse(data);
+              this.addToast("Successfully synchronized with Google Spreadsheet!");
+            })
+            .withFailureHandler(err => {
+              console.error(err);
+              this.addToast("Network Error: Failed to retrieve data from sheets.", "error");
+              this.loading = false;
+            })
+            .getSheetData();
+        },
+
+        handleDataResponse(data) {
+          this.sheetData = data;
+          
+          // Dynamic filter options extraction
+          const monthsSet = new Set();
+          const wishmastersSet = new Set();
+          
+          const MONTH_ABBR = ["jan","feb","mar","apr","may","jun","jul","aug","sep","oct","nov","dec"];
+          
+          data.forEach(row => {
+            if (row.date) {
+              const parts = row.date.split(/[-\/]/);
+              if (parts.length === 3) {
+                // Find the 4-digit year
+                let year = '', monthAbbr = '';
+                for (let i = 0; i < 3; i++) {
+                  if (/^\d{4}$/.test(parts[i])) { year = parts[i]; break; }
+                }
+                if (year) {
+                  const monthPart = parts[1].toLowerCase();
+                  const monthNum = parseInt(monthPart, 10);
+                  if (!isNaN(monthNum) && monthNum >= 1 && monthNum <= 12) {
+                    monthAbbr = MONTH_ABBR[monthNum - 1]; // "06" → "jun"
+                  } else {
+                    monthAbbr = monthPart.substring(0, 3);
+                  }
+                  if (monthAbbr && MONTH_ABBR.indexOf(monthAbbr) !== -1) {
+                    monthsSet.add(`${monthAbbr}-${year}`);
+                  }
+                }
+              }
+            }
+            if (row.name) {
+              wishmastersSet.add(row.name);
+            }
+          });
+
+          // Sort filters chronologically (oldest to newest)
+          const mNames = ["jan", "feb", "mar", "apr", "may", "jun", "jul", "aug", "sep", "oct", "nov", "dec"];
+          this.months = Array.from(monthsSet).sort((a, b) => {
+            const partsA = a.split('-');
+            const partsB = b.split('-');
+            const yA = parseInt(partsA[1], 10);
+            const yB = parseInt(partsB[1], 10);
+            if (yA !== yB) return yA - yB;
+            return mNames.indexOf(partsA[0].toLowerCase()) - mNames.indexOf(partsB[0].toLowerCase());
+          });
+          
+          this.uniqueWishmasters = Array.from(wishmastersSet).sort();
+          
+          // Automatically default to the latest active month in the sheet
+          if (this.months.length > 0 && this.selectedMonth === 'All') {
+            this.selectedMonth = this.months[this.months.length - 1];
+          }
+          
+          this.applyFilters();
+          this.loading = false;
+        },
+
+        applyFilters() {
+          // 1. Filtering logic
+          let filtered = this.sheetData.filter(row => {
+            const matchWish = this.selectedWishmaster === '' || row.name === this.selectedWishmaster;
+            
+            let matchMonth = true;
+            if (this.selectedMonth !== 'All' && row.date) {
+              // Simple check: date like "01-jun-2026" contains "jun-2026"
+              matchMonth = this.dateMatchesMonth(row.date, this.selectedMonth);
+            }
+            
+            let matchSearch = true;
+            if (this.searchQuery && this.currentView === 'detail') {
+              const q = this.searchQuery.toLowerCase();
+              matchSearch = row.name.toLowerCase().includes(q) || 
+                            row.id.toLowerCase().includes(q) || 
+                            (row.dc && row.dc.toLowerCase().includes(q));
+            }
+            
+            return matchWish && matchMonth && matchSearch;
+          });
+
+          // 2. Sorting logic
+          filtered.sort((a, b) => {
+            let valA = a[this.sortKey];
+            let valB = b[this.sortKey];
+
+            if (this.sortKey === 'date') {
+              valA = this.parseDate(a.date).getTime();
+              valB = this.parseDate(b.date).getTime();
+            }
+
+            if (typeof valA === 'string') {
+              valA = valA.toLowerCase();
+              valB = valB.toLowerCase();
+            }
+
+            if (valA < valB) return this.sortAsc ? -1 : 1;
+            if (valA > valB) return this.sortAsc ? 1 : -1;
+            return 0;
+          });
+
+          this.filteredData = filtered;
+          this.calculateTotals();
+          this.rebuildCharts();
+        },
+
+        calculateTotals() {
+          let earningsSum = 0;
+          let paidSum = 0;
+          let deliveredCount = 0;
+          let pickedUpCount = 0;
+          let ofdCount = 0;
+          let ofpCount = 0;
+          
+          this.filteredData.forEach(row => {
+            earningsSum += Number(row.earnings || 0);
+            if (row.status === 'Paid') {
+              paidSum += Number(row.earnings || 0);
+            }
+            deliveredCount += Number(row.delivered || 0);
+            pickedUpCount += Number(row.pickedUp || 0);
+            ofdCount += Number(row.ofd || 0);
+            ofpCount += Number(row.ofp || 0);
+          });
+
+          const unpaidSum = earningsSum - paidSum;
+          const totalTasksCount = deliveredCount + pickedUpCount;
+          const payoutPercent = earningsSum > 0 ? Math.round((paidSum / earningsSum) * 100) : 0;
+          
+          const delPct = ofdCount > 0 ? ((deliveredCount / ofdCount) * 100).toFixed(1) : "0.0";
+          const pickPct = ofpCount > 0 ? ((pickedUpCount / ofpCount) * 100).toFixed(1) : "0.0";
+
+          this.totals = {
+            earnings: earningsSum,
+            paid: paidSum,
+            unpaid: unpaidSum,
+            tasks: totalTasksCount,
+            delivered: deliveredCount,
+            pickedUp: pickedUpCount,
+            ofd: ofdCount,
+            ofp: ofpCount,
+            delConversion: delPct,
+            pickConversion: pickPct,
+            payoutProgress: payoutPercent
+          };
+        },
+
+        // Helper calculations for global dashboard hub
+        get overviewStats() {
+          let totalEarnings = 0;
+          let totalPaid = 0;
+          let deliveredCount = 0;
+          let pickedUpCount = 0;
+          let ofdCount = 0;
+          let ofpCount = 0;
+          const uniqueAgents = new Set();
+
+          this.sheetData.forEach(row => {
+            let matchMonth = true;
+            if (this.selectedMonth !== 'All' && row.date) {
+              matchMonth = this.dateMatchesMonth(row.date, this.selectedMonth);
+            }
+
+            if (matchMonth) {
+              totalEarnings += Number(row.earnings || 0);
+              if (row.status === 'Paid') {
+                totalPaid += Number(row.earnings || 0);
+              }
+              deliveredCount += Number(row.delivered || 0);
+              pickedUpCount += Number(row.pickedUp || 0);
+              ofdCount += Number(row.ofd || 0);
+              ofpCount += Number(row.ofp || 0);
+              if (row.name) {
+                uniqueAgents.add(row.name);
+              }
+            }
+          });
+
+          const payoutProgress = totalEarnings > 0 ? Math.round((totalPaid / totalEarnings) * 100) : 0;
+          return {
+            activeCount: uniqueAgents.size,
+            totalEarnings: totalEarnings,
+            totalPaid: totalPaid,
+            payoutProgress: payoutProgress,
+            delivered: deliveredCount,
+            pickedUp: pickedUpCount,
+            ofd: ofdCount,
+            ofp: ofpCount
+          };
+        },
+
+        getDcBreakdown() {
+          const dcData = {};
+          let grandTotalTasks = 0;
+          let grandTotalEarnings = 0;
+
+          this.sheetData.forEach(row => {
+            let matchMonth = true;
+            if (this.selectedMonth !== 'All' && row.date) {
+              matchMonth = this.dateMatchesMonth(row.date, this.selectedMonth);
+            }
+
+            if (matchMonth && row.dc) {
+              const dcName = row.dc;
+              if (!dcData[dcName]) {
+                dcData[dcName] = { dc: dcName, tasks: 0, earnings: 0 };
+              }
+              const taskCount = Number(row.delivered || 0) + Number(row.pickedUp || 0);
+              dcData[dcName].tasks += taskCount;
+              dcData[dcName].earnings += Number(row.earnings || 0);
+              grandTotalTasks += taskCount;
+              grandTotalEarnings += Number(row.earnings || 0);
+            }
+          });
+
+          const list = Object.values(dcData).map(item => {
+            const taskPct = grandTotalTasks > 0 ? (item.tasks / grandTotalTasks) * 100 : 0;
+            const earnPct = grandTotalEarnings > 0 ? (item.earnings / grandTotalEarnings) * 100 : 0;
+            return {
+              dc: item.dc,
+              tasks: item.tasks,
+              earnings: item.earnings,
+              taskPercentage: parseFloat(taskPct.toFixed(1)),
+              earningPercentage: parseFloat(earnPct.toFixed(1))
+            };
+          });
+
+          // Sort by taskPercentage descending
+          list.sort((a, b) => b.tasks - a.tasks);
+          return list;
+        },
+
+        filteredAgentsList() {
+          const agentsMap = {};
+          
+          this.sheetData.forEach(row => {
+            let matchMonth = true;
+            if (this.selectedMonth !== 'All' && row.date) {
+              matchMonth = this.dateMatchesMonth(row.date, this.selectedMonth);
+            }
+
+            if (matchMonth) {
+              const name = row.name;
+              if (name) {
+                if (!agentsMap[name]) {
+                  agentsMap[name] = {
+                    name: name,
+                    id: row.id,
+                    dc: row.dc,
+                    earnings: 0,
+                    delivered: 0,
+                    ofd: 0,
+                    pickedUp: 0,
+                    ofp: 0
+                  };
+                }
+                agentsMap[name].earnings += Number(row.earnings || 0);
+                agentsMap[name].delivered += Number(row.delivered || 0);
+                agentsMap[name].ofd += Number(row.ofd || 0);
+                agentsMap[name].pickedUp += Number(row.pickedUp || 0);
+                agentsMap[name].ofp += Number(row.ofp || 0);
+              }
+            }
+          });
+
+          let list = Object.values(agentsMap);
+
+          // Filter by searchQuery if present
+          if (this.searchQuery) {
+            const q = this.searchQuery.toLowerCase();
+            list = list.filter(agent => {
+              return agent.name.toLowerCase().includes(q) ||
+                     agent.id.toLowerCase().includes(q) ||
+                     (agent.dc && agent.dc.toLowerCase().includes(q));
+            });
+          }
+
+          // Calculate conversions & format
+          return list.map(agent => {
+            const delConversion = agent.ofd > 0 ? (agent.delivered / agent.ofd) * 100 : 0;
+            const pickConversion = agent.ofp > 0 ? (agent.pickedUp / agent.ofp) * 100 : 0;
+            return {
+              name: agent.name,
+              id: agent.id,
+              dc: agent.dc,
+              earnings: agent.earnings,
+              delivered: agent.delivered,
+              pickedUp: agent.pickedUp,
+              deliveryConversion: parseFloat(delConversion.toFixed(1)),
+              pickupConversion: parseFloat(pickConversion.toFixed(1))
+            };
+          });
+        },
+
+        rebuildCharts() {
+          // Re-evaluate DOM rendering and update Chart.js instances
+          this.$nextTick(() => {
+            this.buildTrendsChart();
+            // Solid layout delay fallback to guarantee chart renders cleanly after DOM layout expansions
+            setTimeout(() => this.buildTrendsChart(), 150);
+          });
+        },
+
+        buildTrendsChart() {
+          const ctx = document.getElementById('trendsChart');
+          if (!ctx) return;
+          // Retrieve and destroy any existing chart instance on this canvas directly to prevent reuse errors
+          try {
+            const existingChart = Chart.getChart(ctx);
+            if (existingChart) {
+              existingChart.destroy();
+            }
+          } catch (e) {
+            console.warn("Chart cleanup warning:", e);
+          }
+          if (this.trendsChart) {
+            try {
+              this.trendsChart.destroy();
+            } catch (e) {}
+            this.trendsChart = null;
+          }
+
+          const self = this;
+
+          // Aggregate filtered data by date so that duplicate dates for multiple agents are aggregated perfectly
+          const aggData = {};
+          this.filteredData.forEach(row => {
+            const d = row.date;
+            if (!aggData[d]) {
+              aggData[d] = { date: d, earnings: 0, delivered: 0, pickedUp: 0, dateObj: this.parseDate(d) };
+            }
+            aggData[d].earnings += row.earnings;
+            aggData[d].delivered += row.delivered;
+            aggData[d].pickedUp += row.pickedUp;
+          });
+
+          // Sort aggregate objects chronologically (oldest to newest for trend)
+          const sortedAgg = Object.values(aggData).sort((a, b) => a.dateObj - b.dateObj);
+
+          const labels = sortedAgg.map(r => r.date);
+          const earnings = sortedAgg.map(r => r.earnings);
+          const workloads = sortedAgg.map(r => r.delivered + r.pickedUp); // Combined completed tasks count!
+
+          const canvasCtx = ctx.getContext('2d');
+          
+          // Redesigned neon line gradient
+          const borderGradient = canvasCtx.createLinearGradient(0, 0, ctx.offsetWidth || 800, 0);
+          borderGradient.addColorStop(0, '#818cf8'); // Purple
+          borderGradient.addColorStop(0.5, '#6366f1'); // Deep Indigo
+          borderGradient.addColorStop(1, '#06b6d4'); // Electric Cyan
+          
+          // Redesigned glowing fill gradient
+          const fillGradient = canvasCtx.createLinearGradient(0, 0, 0, 280);
+          fillGradient.addColorStop(0, 'rgba(6, 182, 212, 0.22)'); // Neon Cyan glow
+          fillGradient.addColorStop(0.5, 'rgba(99, 102, 241, 0.06)'); // Indigo fade
+          fillGradient.addColorStop(1, 'rgba(99, 102, 241, 0)');
+
+          this.trendsChart = new Chart(ctx, {
+            type: 'line',
+            data: {
+              labels: labels,
+              datasets: [
+                {
+                  label: 'Daily Earnings (₹)',
+                  type: 'line',
+                  data: earnings,
+                  borderColor: borderGradient,
+                  backgroundColor: fillGradient,
+                  tension: 0.4,
+                  fill: true,
+                  borderWidth: 3,
+                  pointBackgroundColor: '#06b6d4',
+                  pointBorderColor: '#0b0f19',
+                  pointBorderWidth: 2,
+                  pointRadius: 4,
+                  pointHoverRadius: 8,
+                  pointHoverBackgroundColor: '#ffffff',
+                  pointHoverBorderColor: '#6366f1',
+                  pointHoverBorderWidth: 3,
+                  yAxisID: 'yEarnings',
+                  order: 1
+                },
+                {
+                  label: 'Completed Tasks',
+                  type: 'bar',
+                  data: workloads,
+                  backgroundColor: 'rgba(99, 102, 241, 0.12)',
+                  borderColor: 'rgba(99, 102, 241, 0.35)',
+                  borderWidth: 1.5,
+                  borderRadius: 6,
+                  barPercentage: 0.35,
+                  yAxisID: 'yWorkload',
+                  order: 2
+                }
+              ]
+            },
+            options: {
+              responsive: true,
+              maintainAspectRatio: false,
+              interaction: {
+                mode: 'index',
+                intersect: false
+              },
+              plugins: {
+                legend: {
+                  display: true,
+                  position: 'top',
+                  labels: {
+                    color: '#94a3b8',
+                    font: { family: 'Inter', size: 10, weight: '500' },
+                    boxWidth: 10,
+                    boxHeight: 10,
+                    padding: 10
+                  }
+                },
+                tooltip: {
+                  backgroundColor: '#0f172a',
+                  titleColor: '#f8fafc',
+                  bodyColor: '#e2e8f0',
+                  borderColor: 'rgba(99, 102, 241, 0.3)',
+                  borderWidth: 1.5,
+                  padding: 12,
+                  boxPadding: 6,
+                  cornerRadius: 12,
+                  titleFont: { family: 'Inter', size: 12, weight: 'bold' },
+                  bodyFont: { family: 'Inter', size: 11 },
+                  callbacks: {
+                    label: function(context) {
+                      const dateStr = context.label;
+                      let dayDelivered = 0;
+                      let dayPickedUp = 0;
+                      let dayEarnings = 0;
+                      
+                      self.filteredData.forEach(row => {
+                        if (row.date === dateStr) {
+                          dayDelivered += row.delivered;
+                          dayPickedUp += row.pickedUp;
+                          dayEarnings += row.earnings;
+                        }
+                      });
+                      
+                      return [
+                        `Earnings: ₹${self.formatNumber(dayEarnings)}`,
+                        `Deliveries: ${dayDelivered} completed`,
+                        `Pickups: ${dayPickedUp} completed`,
+                        `Total Workload: ${dayDelivered + dayPickedUp} tasks`
+                      ];
+                    }
+                  }
+                }
+              },
+              scales: {
+                x: {
+                  grid: { display: false },
+                  ticks: { color: '#94a3b8', font: { family: 'Inter', size: 9 } }
+                },
+                yEarnings: {
+                  type: 'linear',
+                  position: 'left',
+                  grid: { color: 'rgba(255, 255, 255, 0.015)', drawBorder: false },
+                  ticks: { 
+                    color: '#818cf8', 
+                    font: { family: 'Inter', size: 9 },
+                    callback: value => '₹' + value
+                  },
+                  title: {
+                    display: true,
+                    text: 'Earnings (INR)',
+                    color: '#818cf8',
+                    font: { family: 'Inter', size: 10, weight: 'bold' }
+                  }
+                },
+                yWorkload: {
+                  type: 'linear',
+                  position: 'right',
+                  grid: { drawOnChartArea: false }, // avoid cross-grid lines
+                  ticks: { 
+                    color: '#34d399', 
+                    font: { family: 'Inter', size: 9 }
+                  },
+                  title: {
+                    display: true,
+                    text: 'Task Volume (Count)',
+                    color: '#34d399',
+                    font: { family: 'Inter', size: 10, weight: 'bold' }
+                  }
+                }
+              }
+            }
+          });
+        },
+
+        // Helper Pagination values
+        get totalPages() {
+          return Math.ceil(this.filteredData.length / this.rowsPerPage);
+        },
+
+        get paginatedData() {
+          const start = (this.currentPage - 1) * this.rowsPerPage;
+          const end = start + this.rowsPerPage;
+          return this.filteredData.slice(start, end);
+        },
+
+        prevPage() {
+          if (this.currentPage > 1) this.currentPage--;
+        },
+
+        nextPage() {
+          if (this.currentPage < this.totalPages) this.currentPage++;
+        },
+
+        // Search & Sorting controls
+        sortBy(key) {
+          if (this.sortKey === key) {
+            this.sortAsc = !this.sortAsc;
+          } else {
+            this.sortKey = key;
+            this.sortAsc = true;
+          }
+          this.applyFilters();
+        },
+
+        resetFilters() {
+          this.selectedMonth = 'All';
+          this.selectedWishmaster = '';
+          this.searchQuery = '';
+          this.sortKey = 'date';
+          this.sortAsc = false;
+          this.currentPage = 1;
+          this.currentView = 'overview';
+          this.applyFilters();
+          this.addToast("Dashboard filters reset successfully.");
+        },
+
+        // Modal Triggers
+        openBulkConfirmModal() {
+          this.unpaidRowIndexes = this.filteredData
+            .filter(row => row.status !== 'Paid')
+            .map(row => row.rowIndex);
+          
+          this.showBulkConfirmModal = true;
+        },
+
+        confirmBulkPayment() {
+          if (this.unpaidRowIndexes.length === 0) return;
+          this.processing = true;
+          const amountPaid = this.totals.unpaid;
+          
+          if (typeof google === 'undefined') {
+            this.addToast("API Error: Action not supported outside Google Sheets.", "error");
+            this.processing = false;
+            this.showBulkConfirmModal = false;
+            return;
+          }
+
+          // Real server connection update
+          google.script.run
+            .withSuccessHandler(res => {
+              if (res.success) {
+                // Update local spreadsheet data array
+                res.rowIndexes.forEach(rowIndex => {
+                  const target = this.sheetData.find(r => r.rowIndex === rowIndex);
+                  if (target) {
+                    target.status = 'Paid';
+                  }
+                });
+                this.applyFilters();
+                this.addToast(`Monthly payout of ₹${this.formatNumber(amountPaid)} recorded in spreadsheet.`);
+              }
+              this.processing = false;
+              this.showBulkConfirmModal = false;
+            })
+            .withFailureHandler(err => {
+              console.error(err);
+              this.addToast(`Failed to update sheet: ${err.message}`, "error");
+              this.processing = false;
+              this.showBulkConfirmModal = false;
+            })
+            .bulkUpdateRowStatuses(this.unpaidRowIndexes, 'Paid');
+        },
+
+        openAgentProfile(row) {
+          const agentName = row.name;
+          const agentId = row.id;
+          const agentDc = row.dc;
+          
+          // Get all records associated with this specific agent
+          const agentRows = this.sheetData.filter(r => r.name === agentName);
+          
+          let earn = 0;
+          let paid = 0;
+          let del = 0;
+          let pick = 0;
+          let ofd = 0;
+          let ofp = 0;
+          
+          agentRows.forEach(r => {
+            earn += r.earnings;
+            if (r.status === 'Paid') {
+              paid += r.earnings;
+            }
+            del += r.delivered;
+            pick += r.pickedUp;
+            ofd += r.ofd;
+            ofp += r.ofp;
+          });
+          
+          const unpaid = earn - paid;
+          const totalTasks = del + pick;
+          const avgDel = ofd > 0 ? ((del / ofd) * 100).toFixed(1) : "0.0";
+          const avgPick = ofp > 0 ? ((pick / ofp) * 100).toFixed(1) : "0.0";
+          
+          this.selectedAgentProfile = {
+            name: agentName,
+            id: agentId,
+            dc: agentDc,
+            earnings: earn,
+            paid: paid,
+            unpaid: unpaid,
+            totalTasks: totalTasks,
+            avgDelConv: avgDel,
+            avgPickConv: avgPick,
+            rows: agentRows
+          };
+          
+          this.showProfileModal = true;
+        },
+
+        printAgentSlip() {
+          // Triggers printer window, utilizing print layout styling
+          window.print();
+        },
+
+        downloadDailyPDF() {
+          if (this.filteredData.length === 0) {
+            this.addToast("No data to export.", "error");
+            return;
+          }
+          
+          const agentName = this.selectedWishmaster || "All Wishmasters";
+          const monthVal = this.selectedMonth;
+          
+          let rowsHtml = '';
+          this.filteredData.forEach(row => {
+            rowsHtml += `
+              <tr>
+                <td class="font-mono-custom">${row.date}</td>
+                <td style="font-weight: 600; color: #0f172a;">${row.name} <span style="font-size: 10px; font-weight: 500; color: #64748b; font-family: monospace;">(${row.id})</span></td>
+                <td style="font-weight: 500;">${row.delivered} <span style="color:#94a3b8; font-size:10px; font-weight:400;">/ ${row.ofd}</span></td>
+                <td>
+                  <span class="badge badge-sky">${row.deliveryConversion.toFixed(1)}%</span>
+                </td>
+                <td style="font-weight: 500;">${row.pickedUp} <span style="color:#94a3b8; font-size:10px; font-weight:400;">/ ${row.ofp}</span></td>
+                <td>
+                  <span class="badge badge-amber">${row.pickupConversion.toFixed(1)}%</span>
+                </td>
+                <td class="text-right" style="font-weight: 700; color: #4f46e5; font-family: 'Outfit'; font-size: 13px;">₹${this.formatNumber(row.earnings)}</td>
+              </tr>
+            `;
+          });
+          
+          const reportTitle = `${agentName.replace(/[^a-zA-Z0-9]/g, '_')}_Daily_Report_${monthVal}`;
+          
+          const printWindow = window.open('', '_blank');
+          if (!printWindow) {
+            this.addToast("Pop-up blocked! Please allow popups to download report.", "error");
+            return;
+          }
+          
+          printWindow.document.write(`
+            <html>
+              <head>
+                <title>${reportTitle}</title>
+                <!-- Include Premium Google Fonts -->
+                <link href="https://fonts.googleapis.com/css2?family=Outfit:wght@300;400;500;600;700;800&family=Plus+Jakarta+Sans:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+                <style>
+                  * { box-sizing: border-box; }
+                  body { 
+                    font-family: 'Plus Jakarta Sans', 'Segoe UI', system-ui, sans-serif; 
+                    color: #1e293b; 
+                    padding: 40px; 
+                    margin: 0; 
+                    background-color: #ffffff;
+                    -webkit-print-color-adjust: exact;
+                    print-color-adjust: exact;
+                  }
+                  .header { 
+                    display: flex; 
+                    justify-content: space-between; 
+                    align-items: center; 
+                    border-bottom: 2px solid #e2e8f0; 
+                    padding-bottom: 24px; 
+                    margin-bottom: 30px;
+                  }
+                  .logo-container {
+                    display: flex;
+                    align-items: center;
+                    gap: 12px;
+                  }
+                  .logo-icon {
+                    background: linear-gradient(135deg, #6366f1, #4f46e5);
+                    width: 40px;
+                    height: 40px;
+                    border-radius: 12px;
+                    display: flex;
+                    align-items: center;
+                    justify-content: center;
+                    color: white;
+                    font-weight: 800;
+                    font-size: 20px;
+                    font-family: 'Outfit', sans-serif;
+                    box-shadow: 0 4px 10px rgba(99, 102, 241, 0.2);
+                  }
+                  .logo-text h1 { 
+                    font-family: 'Outfit', sans-serif;
+                    font-size: 20px; 
+                    font-weight: 800; 
+                    margin: 0; 
+                    color: #0f172a; 
+                    letter-spacing: -0.5px;
+                  }
+                  .logo-text p { 
+                    margin: 2px 0 0 0; 
+                    font-size: 10px; 
+                    color: #64748b; 
+                    font-weight: 500;
+                  }
+                  .period-badge {
+                    background-color: #f8fafc;
+                    border: 1px solid #e2e8f0;
+                    padding: 10px 18px;
+                    border-radius: 14px;
+                    text-align: right;
+                  }
+                  .period-badge .title {
+                    font-size: 8px;
+                    text-transform: uppercase;
+                    color: #64748b;
+                    font-weight: 700;
+                    letter-spacing: 0.8px;
+                    margin: 0 0 4px 0;
+                  }
+                  .period-badge .value {
+                    font-size: 14px;
+                    color: #0f172a;
+                    font-weight: 700;
+                    margin: 0;
+                    font-family: 'Outfit', sans-serif;
+                  }
+                  .agent-meta {
+                    font-size: 11px;
+                    color: #6366f1;
+                    margin-top: 4px;
+                    font-weight: 700;
+                  }
+                  
+                  /* KPI Cards Styles */
+                  .kpi-container { 
+                    display: flex; 
+                    gap: 16px; 
+                    margin-bottom: 35px; 
+                  }
+                  .kpi-card { 
+                    flex: 1; 
+                    border: 1px solid #e2e8f0; 
+                    border-radius: 16px; 
+                    padding: 16px; 
+                    background: #f8fafc;
+                    box-shadow: 0 1px 3px rgba(0,0,0,0.01);
+                    position: relative;
+                    overflow: hidden;
+                  }
+                  .kpi-card::before {
+                    content: '';
+                    position: absolute;
+                    left: 0;
+                    top: 0;
+                    bottom: 0;
+                    width: 4px;
+                    background-color: #6366f1;
+                  }
+                  .kpi-card.earnings::before { background-color: #4f46e5; }
+                  .kpi-card.tasks::before { background-color: #0f172a; }
+                  .kpi-card.delivery::before { background-color: #0284c7; }
+                  .kpi-card.pickup::before { background-color: #d97706; }
+                  
+                  .kpi-label { 
+                    margin: 0; 
+                    font-size: 9px; 
+                    text-transform: uppercase; 
+                    font-weight: 700; 
+                    color: #64748b;
+                    letter-spacing: 0.5px;
+                  }
+                  .kpi-val { 
+                    font-family: 'Outfit', sans-serif;
+                    font-size: 24px; 
+                    font-weight: 800; 
+                    color: #0f172a; 
+                    margin-top: 6px; 
+                  }
+                  .kpi-sub {
+                    font-size: 9px;
+                    color: #94a3b8;
+                    margin-top: 4px;
+                    font-weight: 500;
+                  }
+
+                  /* Table Styles */
+                  table { 
+                    width: 100%; 
+                    border-collapse: separate; 
+                    border-spacing: 0;
+                    margin-top: 20px; 
+                    border: 1px solid #e2e8f0;
+                    border-radius: 14px;
+                    overflow: hidden;
+                  }
+                  th { 
+                    background-color: #f8fafc; 
+                    color: #475569; 
+                    text-transform: uppercase; 
+                    font-size: 9px; 
+                    font-weight: 700; 
+                    padding: 14px 16px; 
+                    border-bottom: 2px solid #e2e8f0;
+                    letter-spacing: 0.8px;
+                  }
+                  td {
+                    padding: 12px 16px;
+                    border-bottom: 1px solid #f1f5f9;
+                    font-size: 11px;
+                    color: #334155;
+                    vertical-align: middle;
+                  }
+                  tr:last-child td {
+                    border-bottom: none;
+                  }
+                  tr:nth-child(even) {
+                    background-color: #fdfefe;
+                  }
+                  .font-mono-custom {
+                    font-family: monospace;
+                    font-weight: 600;
+                    color: #64748b;
+                  }
+                  .badge {
+                    display: inline-flex;
+                    align-items: center;
+                    padding: 4px 8px;
+                    border-radius: 8px;
+                    font-size: 10px;
+                    font-weight: 700;
+                    font-family: 'Outfit', sans-serif;
+                  }
+                  .badge-sky {
+                    background-color: #e0f2fe;
+                    color: #0369a1;
+                  }
+                  .badge-amber {
+                    background-color: #fef3c7;
+                    color: #b45309;
+                  }
+                  .text-right {
+                    text-align: right;
+                  }
+                  
+                  /* Signatures and Footer */
+                  .footer-sig { 
+                    display: flex; 
+                    justify-content: space-between; 
+                    margin-top: 70px; 
+                    font-size: 12px; 
+                    border-top: 1px solid #e2e8f0; 
+                    padding-top: 30px; 
+                  }
+                  .sig-block {
+                    width: 220px;
+                  }
+                  .sig-title {
+                    font-weight: 700; 
+                    margin-bottom: 50px; 
+                    color: #0f172a;
+                    font-size: 11px;
+                    text-transform: uppercase;
+                    letter-spacing: 0.8px;
+                  }
+                  .sig-line {
+                    border-bottom: 1.5px solid #cbd5e1;
+                  }
+                  .sig-subtitle {
+                    font-size: 9px; 
+                    color: #64748b; 
+                    margin-top: 6px;
+                    font-weight: 600;
+                    text-transform: uppercase;
+                    letter-spacing: 0.5px;
+                  }
+                  @media print {
+                    button { display: none; }
+                    body { padding: 0; }
+                  }
+                </style>
+              </head>
+              <body>
+                <div class="header">
+                  <div class="logo-container">
+                    <div class="logo-icon">W</div>
+                    <div class="logo-text">
+                      <h1>Wishmaster Ledger Statement</h1>
+                      <p>Payout & Performance Analysis Record</p>
+                    </div>
+                  </div>
+                  <div class="period-badge">
+                    <p class="title">Operating Period</p>
+                    <p class="value">${this.formatMonthYear(monthVal)}</p>
+                    <div class="agent-meta">Agent: ${agentName}</div>
+                  </div>
+                </div>
+
+                <div class="kpi-container">
+                  <div class="kpi-card earnings">
+                    <p class="kpi-label">Total Net Earnings</p>
+                    <div class="kpi-val">₹${this.formatNumber(this.totals.earnings)}</div>
+                    <div class="kpi-sub">Calculated at flat rate ₹13/task</div>
+                  </div>
+                  <div class="kpi-card tasks">
+                    <p class="kpi-label">Total Task Volume</p>
+                    <div class="kpi-val">${this.totals.tasks}</div>
+                    <div class="kpi-sub">${this.totals.delivered} Deliveries • ${this.totals.pickedUp} Pickups</div>
+                  </div>
+                  <div class="kpi-card delivery">
+                    <p class="kpi-label">Avg Deliv. Conversion</p>
+                    <div class="kpi-val" style="color: #0369a1;">${this.totals.delConversion}%</div>
+                    <div class="kpi-sub">Target: ${this.totals.ofd} Packets</div>
+                  </div>
+                  <div class="kpi-card pickup">
+                    <p class="kpi-label">Avg Pickup Conversion</p>
+                    <div class="kpi-val" style="color: #b45309;">${this.totals.pickConversion}%</div>
+                    <div class="kpi-sub">Target: ${this.totals.ofp} Pickups</div>
+                  </div>
+                </div>
+
+                <table>
+                  <thead>
+                    <tr>
+                      <th style="text-align: left; width: 14%;">Date</th>
+                      <th style="text-align: left; width: 28%;">Wishmaster Name & ID</th>
+                      <th style="text-align: left; width: 16%;">Delivered / Target</th>
+                      <th style="text-align: left; width: 14%;">Del. Conversion</th>
+                      <th style="text-align: left; width: 16%;">Picked / Target</th>
+                      <th style="text-align: left; width: 14%;">Pick. Conversion</th>
+                      <th style="text-align: right; width: 14%;">Daily Earning</th>
+                    </tr>
+                  </thead>
+                  <tbody>
+                    ${rowsHtml}
+                  </tbody>
+                </table>
+
+                <div class="footer-sig">
+                  <div class="sig-block">
+                    <p class="sig-title">Prepared By</p>
+                    <div class="sig-line"></div>
+                    <p class="sig-subtitle">Authorized Administrator</p>
+                  </div>
+                  <div class="sig-block" style="text-align: right;">
+                    <p class="sig-title" style="margin-left: auto;">Recipient Signature</p>
+                    <div class="sig-line"></div>
+                    <p class="sig-subtitle">Wishmaster Acknowledgement</p>
+                  </div>
+                </div>
+
+                <script>
+                  window.onload = function() {
+                    window.print();
+                    setTimeout(function() { window.close(); }, 500);
+                  };
+                <\/script>
+              </body>
+            </html>
+          `);
+          printWindow.document.close();
+        },
+
+        downloadDailyCSV() {
+          if (this.filteredData.length === 0) {
+            this.addToast("No data to export.", "error");
+            return;
+          }
+          
+          const agentName = this.selectedWishmaster || "All_Wishmasters";
+          const monthVal = this.selectedMonth;
+          
+          // Build CSV content
+          const headers = ["Date", "Wishmaster Name", "Wishmaster ID", "Distribution Center", "Delivered Tasks", "Out for Delivery", "Delivery Conversion %", "Picked Up Tasks", "Out for Pickup", "Pickup Conversion %", "Daily Earning (INR)"];
+          const rows = this.filteredData.map(r => [
+            r.date,
+            r.name,
+            r.id,
+            r.dc || "N/A",
+            r.delivered,
+            r.ofd,
+            r.deliveryConversion.toFixed(2),
+            r.pickedUp,
+            r.ofp,
+            r.pickupConversion.toFixed(2),
+            r.earnings
+          ]);
+          
+          const csvContent = "data:text/csv;charset=utf-8," 
+            + [headers.join(","), ...rows.map(e => e.map(val => `"${String(val).replace(/"/g, '""')}"`).join(","))].join("\n");
+            
+          const encodedUri = encodeURI(csvContent);
+          const link = document.createElement("a");
+          link.setAttribute("href", encodedUri);
+          const filename = `${agentName.replace(/[^a-zA-Z0-9]/g, '_')}_Daily_Data_${monthVal}.csv`;
+          link.setAttribute("download", filename);
+          document.body.appendChild(link);
+          
+          link.click();
+          document.body.removeChild(link);
+          this.addToast("CSV downloaded successfully!");
+        },
+
+
+
+        submitInlineEdit(originalRowIndex, fieldName, rawValue) {
+          const value = parseInt(rawValue, 10);
+          if (isNaN(value) || value < 0) {
+            this.addToast("Invalid input: Please enter a non-negative number.", "error");
+            return;
+          }
+          
+          const targetRow = this.sheetData.find(r => r.rowIndex === originalRowIndex);
+          if (!targetRow) {
+            this.addToast("Error finding target row record.", "error");
+            return;
+          }
+          
+          // Derive the month-year key from the row's date (e.g. "01-jun-2026" → "jun-2026")
+          let rowMonth = this.selectedMonth;
+          if (rowMonth === 'All' && targetRow.date) {
+            const dateParts = targetRow.date.split('-'); // e.g. ["01", "jun", "2026"]
+            if (dateParts.length === 3) {
+              rowMonth = `${dateParts[1]}-${dateParts[2]}`; // "jun-2026"
+            }
+          }
+          
+          this.processing = true;
+
+
+          google.script.run
+            .withSuccessHandler(res => {
+              if (res.success) {
+                // Update local array state immediately
+                if (fieldName === 'del_update') {
+                  targetRow.delivered = value;
+                } else if (fieldName === 'ofd') {
+                  targetRow.ofd = value;
+                } else if (fieldName === 'picked-up') {
+                  targetRow.pickedUp = value;
+                } else if (fieldName === 'ofp') {
+                  targetRow.ofp = value;
+                }
+                
+                targetRow.earnings = (targetRow.delivered + targetRow.pickedUp) * 13;
+                targetRow.deliveryConversion = targetRow.ofd > 0 ? (targetRow.delivered / targetRow.ofd) * 100 : (targetRow.delivered > 0 ? 100 : 0);
+                targetRow.pickupConversion = targetRow.ofp > 0 ? (targetRow.pickedUp / targetRow.ofp) * 100 : (targetRow.pickedUp > 0 ? 100 : 0);
+                
+                this.applyFilters();
+                this.addToast("Correction saved and spreadsheet updated successfully!");
+              } else {
+                this.addToast(res.message, "error");
+              }
+              this.processing = false;
+            })
+            .withFailureHandler(err => {
+              console.error(err);
+              this.addToast(`Sync failed: ${err.message}`, "error");
+              this.processing = false;
+            })
+            .saveInlineCorrection(rowMonth, originalRowIndex, fieldName, value);
+        },
+
+
+
+        // Helper calculations
+        formatNumber(num) {
+          return Number(num).toLocaleString('en-IN');
+        },
+
+        parseDate(dateStr) {
+          if (!dateStr) return new Date(0);
+          if (dateStr instanceof Date) return dateStr;
+          
+          const cleanStr = String(dateStr).trim();
+          const months = ["Jan", "Feb", "Mar", "Apr", "May", "Jun", "Jul", "Aug", "Sep", "Oct", "Nov", "Dec"];
+          
+          // Split by '-' or '/'
+          const parts = cleanStr.split(/[-/]/);
+          if (parts.length === 3) {
+            const p0 = parts[0].trim();
+            const p1 = parts[1].trim();
+            const p2 = parts[2].trim();
+            
+            const day = parseInt(p0, 10);
+            const year = parseInt(p2, 10);
+            
+            // Format: DD-MM-YYYY or DD-Mmm-YYYY
+            if (!isNaN(day) && !isNaN(year) && p2.length === 4) {
+              const monthNum = parseInt(p1, 10);
+              if (!isNaN(monthNum) && monthNum >= 1 && monthNum <= 12) {
+                return new Date(year, monthNum - 1, day);
+              } else {
+                const cleanMonth = p1.substring(0, 3);
+                const capMonth = cleanMonth.charAt(0).toUpperCase() + cleanMonth.slice(1).toLowerCase();
+                const monthIdx = months.indexOf(capMonth);
+                if (monthIdx !== -1) {
+                  return new Date(year, monthIdx, day);
+                }
+              }
+            }
+            
+            // Format: YYYY-MM-DD
+            const yVal = parseInt(p0, 10);
+            const dVal = parseInt(p2, 10);
+            if (!isNaN(yVal) && p0.length === 4 && !isNaN(dVal)) {
+              const mVal = parseInt(p1, 10);
+              if (!isNaN(mVal) && mVal >= 1 && mVal <= 12) {
+                return new Date(yVal, mVal - 1, dVal);
+              } else {
+                const cleanMonth = p1.substring(0, 3);
+                const capMonth = cleanMonth.charAt(0).toUpperCase() + cleanMonth.slice(1).toLowerCase();
+                const monthIdx = months.indexOf(capMonth);
+                if (monthIdx !== -1) {
+                  return new Date(yVal, monthIdx, dVal);
+                }
+              }
+            }
+          }
+          
+          const parsed = new Date(cleanStr);
+          return isNaN(parsed.getTime()) ? new Date(0) : parsed;
+        },
+
+        addToast(message, type = 'success') {
+          const id = Date.now();
+          this.toasts.push({ id, message, type });
+          setTimeout(() => {
+            this.toasts = this.toasts.filter(t => t.id !== id);
+          }, 3500);
+        },
+      }
+    }
+  </script>
+</body>
+</html>
