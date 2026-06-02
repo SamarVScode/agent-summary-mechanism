@@ -54,7 +54,7 @@ export default function TrackerPage({ agentName, onChangeName }) {
       } else {
         setPhase("upload");
         setToast(
-          "⚠️ Could not read screenshot. Please use a clear, well-lit image."
+          "Could not read screenshot. Please use a clear, well-lit image."
         );
         setTimeout(() => setToast(""), 5000);
       }
@@ -139,7 +139,13 @@ export default function TrackerPage({ agentName, onChangeName }) {
         {/* OCR hint */}
         {phase === "upload" && !imageState && (
           <div className="hint-card">
-            <span className="hint-icon">💡</span>
+            <span className="hint-icon">
+              <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="var(--primary)" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round" style={{ display: "block" }}>
+                <path d="M15 14c.2-1 .7-1.7 1.5-2.5 1-.9 1.5-2.2 1.5-3.5A7.5 7.5 0 0 0 3 8c0 1.3.5 2.6 1.5 3.5.7.8 1.3 1.5 1.5 2.5"></path>
+                <line x1="9" y1="18" x2="15" y2="18"></line>
+                <line x1="10" y1="22" x2="14" y2="22"></line>
+              </svg>
+            </span>
             <span>
               The app will automatically read the <strong>Total</strong> and{" "}
               <strong>Completed</strong> counts from your screenshot.
