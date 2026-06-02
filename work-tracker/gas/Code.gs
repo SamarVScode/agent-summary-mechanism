@@ -138,7 +138,7 @@ function syncAgentsToSupabase() {
     Logger.log(`Read ${agents.length} agent names from Sheet. Syncing with Supabase...`);
 
     // 1. Truncate/delete all rows in Supabase agents table
-    const deleteUrl = `${SUPABASE_URL}/rest/v1/agents?select=*`;
+    const deleteUrl = `${SUPABASE_URL}/rest/v1/agents?id=gt.0`;
     const deleteRes = UrlFetchApp.fetch(deleteUrl, {
       method: "DELETE",
       headers: {
