@@ -2,18 +2,15 @@
 //  DAILY WORK TRACKER — Google Apps Script Backend (Supabase Bridge)
 //  Set up these functions to run on triggers:
 //    - processSupabaseSubmissions  --> Time-driven trigger (every 5 mins)
-//    - syncAgentsToSupabase        --> Installable edit trigger or manual run
 // ═══════════════════════════════════════════════════════════════════
 
 // ── CONFIGURATION ── Fill these in before running ──────────────────
 const SPREADSHEET_ID        = "1ntacTkjZ6CZV3qHrNaxPYe_lch7ySDTeLuSNS_q_ATQ";
 const SHEET_TAB_NAME        = "Tally";          // work log sheet tab
-const AGENTS_SHEET_TAB_NAME = "Agents";         // agent names in col A, no header
 const DRIVE_FOLDER_ID       = "17x6oxFZi-jxLyEOND5YtLWNT3ejuxlQv";
 
 const SUPABASE_URL          = "https://matoieqhletkjcjfvars.supabase.co";
-const SUPABASE_ANON_KEY     = "sb_publishable_h4qeENgYle29ywox-PyN3g_A6QG-2XJ";
-const SUPABASE_SERVICE_KEY  = "YOUR_SUPABASE_SERVICE_ROLE_KEY_HERE";
+const SUPABASE_KEY          = "sb_publishable_h4qeENgYle29ywox-PyN3g_A6QG-2XJ"; // Public key (RLS must be disabled on Supabase)
 // ───────────────────────────────────────────────────────────────────
 
 /**
@@ -32,9 +29,7 @@ function processSupabaseSubmissions() {
     const response = UrlFetchApp.fetch(url, {
       method: "GET",
       headers: {
-        "apikey": SUPABASE_SERVICE_KEY,
-        "Origin": SUPABASE_URL,
-        "Referer": SUPABASE_URL
+        "apikey": SUPABASE_KEY
       }
     });
 
@@ -71,7 +66,12 @@ function processSupabaseSubmissions() {
 
           // Save the file to Google Drive folder
           const file = folder.createFile(imgBlob);
-          file.setSharing(DriveApp.Access.ANYONE_WITH_LINK, DriveApp.Permission.VIEW);
+          try {
+            file.setSharing(DriveApp.Access.ANYONE_WITH_LINK, DriveApp.Permission.VIEW);
+          } catch (e) {
+            // Sharing settings might be blocked by organization policies; skip silently
+            Logger.log(`Skipping public sharing settings: ${e.message}`);
+          }
           driveUrl = file.getUrl();
         } catch (imgErr) {
           Logger.log(`Failed to save image for ${item.agent_name}: ${imgErr.message}`);
@@ -95,9 +95,7 @@ function processSupabaseSubmissions() {
       const patchResponse = UrlFetchApp.fetch(patchUrl, {
         method: "PATCH",
         headers: {
-          "apikey": SUPABASE_SERVICE_KEY,
-          "Origin": SUPABASE_URL,
-          "Referer": SUPABASE_URL,
+          "apikey": SUPABASE_KEY,
           "Content-Type": "application/json"
         },
         payload: JSON.stringify({ processed: true })
@@ -112,73 +110,5 @@ function processSupabaseSubmissions() {
 
   } catch (err) {
     Logger.log(`Error running processSupabaseSubmissions: ${err.message}`);
-  }
-}
-
-/**
- * syncAgentsToSupabase — reads the current agent list from Sheets and syncs it to Supabase.
- * Call this manually or set an onChange/onEdit trigger in Apps Script editor.
- */
-function syncAgentsToSupabase() {
-  try {
-    if (SUPABASE_URL.includes("YOUR_SUPABASE")) {
-      Logger.log("Supabase is not configured yet.");
-      return;
-    }
-
-    const ss = SpreadsheetApp.openById(SPREADSHEET_ID);
-    const sheet = ss.getSheetByName(AGENTS_SHEET_TAB_NAME);
-    const lastRow = sheet.getLastRow();
-    
-    let agents = [];
-    if (lastRow >= 1) {
-      const values = sheet.getRange(1, 1, lastRow, 1).getValues();
-      agents = values
-        .map(row => String(row[0]).trim())
-        .filter(name => name.length > 0);
-    }
-
-    Logger.log(`Read ${agents.length} agent names from Sheet. Syncing with Supabase...`);
-
-    // 1. Truncate/delete all rows in Supabase agents table
-    const deleteUrl = `${SUPABASE_URL}/rest/v1/agents?id=gt.0`;
-    const deleteRes = UrlFetchApp.fetch(deleteUrl, {
-      method: "DELETE",
-      headers: {
-        "apikey": SUPABASE_SERVICE_KEY,
-        "Origin": SUPABASE_URL,
-        "Referer": SUPABASE_URL
-      }
-    });
-
-    if (deleteRes.getResponseCode() >= 300) {
-      throw new Error(`Failed to clear Supabase agents table: ${deleteRes.getContentText()}`);
-    }
-
-    // 2. Insert new agent rows
-    if (agents.length > 0) {
-      const insertUrl = `${SUPABASE_URL}/rest/v1/agents`;
-      const payload = agents.map(name => ({ name }));
-      
-      const insertRes = UrlFetchApp.fetch(insertUrl, {
-        method: "POST",
-        headers: {
-          "apikey": SUPABASE_SERVICE_KEY,
-          "Origin": SUPABASE_URL,
-          "Referer": SUPABASE_URL,
-          "Content-Type": "application/json"
-        },
-        payload: JSON.stringify(payload)
-      });
-
-      if (insertRes.getResponseCode() >= 300) {
-        throw new Error(`Failed to insert agents to Supabase: ${insertRes.getContentText()}`);
-      }
-    }
-
-    Logger.log(`Successfully synced ${agents.length} agents to Supabase.`);
-
-  } catch (err) {
-    Logger.log(`Error running syncAgentsToSupabase: ${err.message}`);
   }
 }

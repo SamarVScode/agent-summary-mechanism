@@ -67,7 +67,7 @@ export default function TrackerPage({ agentName, onChangeName }) {
 
     const fileExt = imageState?.file?.name?.split(".").pop() || "jpeg";
     const safeAgentName = agentName.trim().replace(/[^a-zA-Z0-9]/g, "_");
-    const customImageName = `${safeAgentName}_${today}.${fileExt}`;
+    const customImageName = `${safeAgentName}_${today}_${Date.now()}.${fileExt}`;
 
     await submit({
       date:           today,
