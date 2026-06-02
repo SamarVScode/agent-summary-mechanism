@@ -33,7 +33,8 @@ function processSupabaseSubmissions() {
       method: "GET",
       headers: {
         "apikey": SUPABASE_SERVICE_KEY,
-        "User-Agent": "GAS-Backend/1.0"
+        "Origin": SUPABASE_URL,
+        "Referer": SUPABASE_URL
       }
     });
 
@@ -95,7 +96,8 @@ function processSupabaseSubmissions() {
         method: "PATCH",
         headers: {
           "apikey": SUPABASE_SERVICE_KEY,
-          "User-Agent": "GAS-Backend/1.0",
+          "Origin": SUPABASE_URL,
+          "Referer": SUPABASE_URL,
           "Content-Type": "application/json"
         },
         payload: JSON.stringify({ processed: true })
@@ -144,7 +146,8 @@ function syncAgentsToSupabase() {
       method: "DELETE",
       headers: {
         "apikey": SUPABASE_SERVICE_KEY,
-        "User-Agent": "GAS-Backend/1.0"
+        "Origin": SUPABASE_URL,
+        "Referer": SUPABASE_URL
       }
     });
 
@@ -161,7 +164,8 @@ function syncAgentsToSupabase() {
         method: "POST",
         headers: {
           "apikey": SUPABASE_SERVICE_KEY,
-          "User-Agent": "GAS-Backend/1.0",
+          "Origin": SUPABASE_URL,
+          "Referer": SUPABASE_URL,
           "Content-Type": "application/json"
         },
         payload: JSON.stringify(payload)
