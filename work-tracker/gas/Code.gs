@@ -13,6 +13,7 @@ const DRIVE_FOLDER_ID       = "17x6oxFZi-jxLyEOND5YtLWNT3ejuxlQv";
 
 const SUPABASE_URL          = "https://matoieqhletkjcjfvars.supabase.co";
 const SUPABASE_ANON_KEY     = "sb_publishable_h4qeENgYle29ywox-PyN3g_A6QG-2XJ";
+const SUPABASE_SERVICE_KEY  = "YOUR_SUPABASE_SERVICE_ROLE_KEY_HERE";
 // ───────────────────────────────────────────────────────────────────
 
 /**
@@ -32,7 +33,7 @@ function processSupabaseSubmissions() {
       method: "GET",
       headers: {
         "apikey": SUPABASE_ANON_KEY,
-        "Authorization": `Bearer ${SUPABASE_ANON_KEY}`
+        "Authorization": `Bearer ${SUPABASE_SERVICE_KEY}`
       }
     });
 
@@ -94,7 +95,7 @@ function processSupabaseSubmissions() {
         method: "PATCH",
         headers: {
           "apikey": SUPABASE_ANON_KEY,
-          "Authorization": `Bearer ${SUPABASE_ANON_KEY}`,
+          "Authorization": `Bearer ${SUPABASE_SERVICE_KEY}`,
           "Content-Type": "application/json"
         },
         payload: JSON.stringify({ processed: true })
@@ -143,7 +144,7 @@ function syncAgentsToSupabase() {
       method: "DELETE",
       headers: {
         "apikey": SUPABASE_ANON_KEY,
-        "Authorization": `Bearer ${SUPABASE_ANON_KEY}`
+        "Authorization": `Bearer ${SUPABASE_SERVICE_KEY}`
       }
     });
 
@@ -160,7 +161,7 @@ function syncAgentsToSupabase() {
         method: "POST",
         headers: {
           "apikey": SUPABASE_ANON_KEY,
-          "Authorization": `Bearer ${SUPABASE_ANON_KEY}`,
+          "Authorization": `Bearer ${SUPABASE_SERVICE_KEY}`,
           "Content-Type": "application/json"
         },
         payload: JSON.stringify(payload)
