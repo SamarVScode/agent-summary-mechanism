@@ -32,8 +32,8 @@ function processSupabaseSubmissions() {
     const response = UrlFetchApp.fetch(url, {
       method: "GET",
       headers: {
-        "apikey": SUPABASE_ANON_KEY,
-        "Authorization": `Bearer ${SUPABASE_SERVICE_KEY}`
+        "apikey": SUPABASE_SERVICE_KEY,
+        "User-Agent": "GAS-Backend/1.0"
       }
     });
 
@@ -94,8 +94,8 @@ function processSupabaseSubmissions() {
       const patchResponse = UrlFetchApp.fetch(patchUrl, {
         method: "PATCH",
         headers: {
-          "apikey": SUPABASE_ANON_KEY,
-          "Authorization": `Bearer ${SUPABASE_SERVICE_KEY}`,
+          "apikey": SUPABASE_SERVICE_KEY,
+          "User-Agent": "GAS-Backend/1.0",
           "Content-Type": "application/json"
         },
         payload: JSON.stringify({ processed: true })
@@ -143,8 +143,8 @@ function syncAgentsToSupabase() {
     const deleteRes = UrlFetchApp.fetch(deleteUrl, {
       method: "DELETE",
       headers: {
-        "apikey": SUPABASE_ANON_KEY,
-        "Authorization": `Bearer ${SUPABASE_SERVICE_KEY}`
+        "apikey": SUPABASE_SERVICE_KEY,
+        "User-Agent": "GAS-Backend/1.0"
       }
     });
 
@@ -160,8 +160,8 @@ function syncAgentsToSupabase() {
       const insertRes = UrlFetchApp.fetch(insertUrl, {
         method: "POST",
         headers: {
-          "apikey": SUPABASE_ANON_KEY,
-          "Authorization": `Bearer ${SUPABASE_SERVICE_KEY}`,
+          "apikey": SUPABASE_SERVICE_KEY,
+          "User-Agent": "GAS-Backend/1.0",
           "Content-Type": "application/json"
         },
         payload: JSON.stringify(payload)
