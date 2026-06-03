@@ -1,5 +1,4 @@
 import { useState, useCallback } from "react";
-import Header            from "./Header";
 import ScreenshotUploader from "./ScreenshotUploader";
 import OcrLoader          from "./OcrLoader";
 import ConfirmModal       from "./ConfirmModal";
@@ -9,16 +8,9 @@ import { useGasSubmit }   from "../hooks/useGasSubmit";
 import { formatDate }     from "../utils/dateUtils";
 
 /**
- * TrackerPage — main page orchestrator.
- *
- * State machine:
- *   "upload" → image selected → "ocr" → OCR done →
- *     success: "confirm" (modal shown)
- *     error:   back to "upload" with toast
- *   "confirm" → confirmed → "submitting" → "result"
- *   "result"  → reset → "upload"
+ * TrackerPage — image upload and OCR orchestrator.
  */
-export default function TrackerPage({ agentName, onChangeName }) {
+export default function TrackerPage({ agentName }) {
   const today = formatDate();
 
   // ── image state ───────────────────────────────────────────────────
@@ -99,60 +91,53 @@ export default function TrackerPage({ agentName, onChangeName }) {
   // After result is shown, show the result screen instead of the form
   if (phase === "result" && submitResult) {
     return (
-      <div className="page">
-        <Header agentName={agentName} date={today} onChangeName={onChangeName} />
-        <main className="page-main">
-          <SubmissionResult
-            result={submitResult}
-            onReset={handleReset}
-            agentName={agentName}
-            date={today}
-            totalCount={ocrResult?.totalCount}
-            completedCount={ocrResult?.completedCount}
-          />
-        </main>
+      <div className="tracker-container">
+        <SubmissionResult
+          result={submitResult}
+          onReset={handleReset}
+          agentName={agentName}
+          date={today}
+          totalCount={ocrResult?.totalCount}
+          completedCount={ocrResult?.completedCount}
+        />
       </div>
     );
   }
 
   return (
-    <div className="page">
-      <Header agentName={agentName} date={today} onChangeName={onChangeName} />
+    <div className="tracker-container">
+      {/* Toast */}
+      {toast && <div className="toast toast--error">{toast}</div>}
 
-      <main className="page-main">
-        {/* Toast */}
-        {toast && <div className="toast toast--error">{toast}</div>}
+      {/* Upload card */}
+      <div className="card upload-card">
+        <h2 className="card-title">Today&apos;s Summary</h2>
+        <p className="card-subtitle">
+          Upload your end-of-day Summary screenshot
+        </p>
+        <ScreenshotUploader
+          onImageSelected={handleImageSelected}
+          disabled={phase === "ocr" || phase === "submitting"}
+          currentPreview={imageState?.previewUrl}
+        />
+      </div>
 
-        {/* Upload card */}
-        <div className="card upload-card">
-          <h2 className="card-title">Today&apos;s Summary</h2>
-          <p className="card-subtitle">
-            Upload your end-of-day Summary screenshot
-          </p>
-          <ScreenshotUploader
-            onImageSelected={handleImageSelected}
-            disabled={phase === "ocr" || phase === "submitting"}
-            currentPreview={imageState?.previewUrl}
-          />
+      {/* OCR hint */}
+      {phase === "upload" && !imageState && (
+        <div className="hint-card">
+          <span className="hint-icon">
+            <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round" style={{ display: "block" }}>
+              <path d="M15 14c.2-1 .7-1.7 1.5-2.5 1-.9 1.5-2.2 1.5-3.5A7.5 7.5 0 0 0 3 8c0 1.3.5 2.6 1.5 3.5.7.8 1.3 1.5 1.5 2.5"></path>
+              <line x1="9" y1="18" x2="15" y2="18"></line>
+              <line x1="10" y1="22" x2="14" y2="22"></line>
+            </svg>
+          </span>
+          <span>
+            The app will automatically read the <strong>Total</strong> and{" "}
+            <strong>Completed</strong> counts from your screenshot.
+          </span>
         </div>
-
-        {/* OCR hint */}
-        {phase === "upload" && !imageState && (
-          <div className="hint-card">
-            <span className="hint-icon">
-              <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="var(--primary)" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round" style={{ display: "block" }}>
-                <path d="M15 14c.2-1 .7-1.7 1.5-2.5 1-.9 1.5-2.2 1.5-3.5A7.5 7.5 0 0 0 3 8c0 1.3.5 2.6 1.5 3.5.7.8 1.3 1.5 1.5 2.5"></path>
-                <line x1="9" y1="18" x2="15" y2="18"></line>
-                <line x1="10" y1="22" x2="14" y2="22"></line>
-              </svg>
-            </span>
-            <span>
-              The app will automatically read the <strong>Total</strong> and{" "}
-              <strong>Completed</strong> counts from your screenshot.
-            </span>
-          </div>
-        )}
-      </main>
+      )}
 
       {/* OCR overlay */}
       <OcrLoader visible={phase === "ocr"} />
@@ -172,5 +157,3 @@ export default function TrackerPage({ agentName, onChangeName }) {
     </div>
   );
 }
-
-
