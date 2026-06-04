@@ -10,7 +10,7 @@ export function useGasSubmit() {
   const [submitting, setSubmitting] = useState(false);
   const [result, setResult]         = useState(null);
 
-  async function submit({ date, agentName, totalCount, completedCount, imageBase64, imageName, file }) {
+  async function submit({ date, agentName, totalCount, completedCount, imageBase64, imageName, file, fileHash }) {
     setSubmitting(true);
     setResult(null);
 
@@ -67,6 +67,7 @@ export function useGasSubmit() {
           total_count: totalCount,
           completed_count: completedCount,
           image_url: publicImageUrl,
+          file_hash: fileHash, // Save the unique hash
           processed: false
         })
       });
