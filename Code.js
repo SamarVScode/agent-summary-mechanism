@@ -6,6 +6,100 @@ const SHEET_TAB_NAME = "Agent_view";
 const TEMP_SPREADSHEET_ID = "1yVhXMczYVNIaR1rbuMCALyfhr9H8sFat8jPGL3YdZv0"; // Dedicated spreadsheet ID where temporary monthly payout tabs are created
 const RATE_PER_TASK = 13.00;
 
+// ── SUPABASE CONFIGURATION ──────────────────
+const SUPABASE_URL = "https://matoieqhletkjcjfvars.supabase.co";
+const SUPABASE_KEY = "sb_publishable_h4qeENgYle29ywox-PyN3g_A6QG-2XJ"; 
+// ─────────────────────────────────────────────
+
+/**
+ * Fetches the list of agent names from Supabase.
+ */
+function fetchAgentsFromSupabase() {
+  try {
+    const url = `${SUPABASE_URL}/rest/v1/agents?select=name&order=name.asc`;
+    const response = UrlFetchApp.fetch(url, {
+      method: "GET",
+      headers: {
+        "apikey": SUPABASE_KEY,
+        "Authorization": "Bearer " + SUPABASE_KEY
+      }
+    });
+    
+    if (response.getResponseCode() !== 200) {
+      throw new Error(`Failed to fetch agents: ${response.getContentText()}`);
+    }
+    
+    const agents = JSON.parse(response.getContentText());
+    return agents.map(a => a.name);
+  } catch (err) {
+    Logger.log("Error in fetchAgentsFromSupabase: " + err.message);
+    throw err;
+  }
+}
+
+/**
+ * Adds a new agent name to the Supabase agents table.
+ */
+function addAgentToSupabase(agentName) {
+  try {
+    if (!agentName) throw new Error("Agent name is required.");
+    
+    const url = `${SUPABASE_URL}/rest/v1/agents`;
+    const response = UrlFetchApp.fetch(url, {
+      method: "POST",
+      headers: {
+        "apikey": SUPABASE_KEY,
+        "Authorization": "Bearer " + SUPABASE_KEY,
+        "Content-Type": "application/json",
+        "Prefer": "return=minimal"
+      },
+      payload: JSON.stringify({ name: agentName }),
+      muteHttpExceptions: true
+    });
+    
+    if (response.getResponseCode() >= 300) {
+      const errText = response.getContentText();
+      Logger.log(`Failed to add agent: ${errText}`);
+      throw new Error(`Failed to add agent: ${errText}`);
+    }
+    
+    return { success: true, message: `Agent '${agentName}' added successfully.` };
+  } catch (err) {
+    Logger.log("Error in addAgentToSupabase: " + err.message);
+    throw err;
+  }
+}
+
+/**
+ * Removes an agent name from the Supabase agents table.
+ */
+function removeAgentFromSupabase(agentName) {
+  try {
+    if (!agentName) throw new Error("Agent name is required.");
+    
+    const url = `${SUPABASE_URL}/rest/v1/agents?name=eq.${encodeURIComponent(agentName)}`;
+    const response = UrlFetchApp.fetch(url, {
+      method: "DELETE",
+      headers: {
+        "apikey": SUPABASE_KEY,
+        "Authorization": "Bearer " + SUPABASE_KEY
+      },
+      muteHttpExceptions: true
+    });
+    
+    if (response.getResponseCode() >= 300) {
+      const errText = response.getContentText();
+      Logger.log(`Failed to remove agent: ${errText}`);
+      throw new Error(`Failed to remove agent: ${errText}`);
+    }
+    
+    return { success: true, message: `Agent '${agentName}' removed successfully.` };
+  } catch (err) {
+    Logger.log("Error in removeAgentFromSupabase: " + err.message);
+    throw err;
+  }
+}
+
 /**
  * Serves the HTML file 'Index.html' to the user web app.
  * @return {HtmlService.HtmlOutput} The evaluated HTML template.
@@ -873,6 +967,36 @@ function prepareTempTabForMonth(selectedMonth) {
     if (matchingRows.length === 0) {
       return { success: false, message: `No transaction rows found matching month: ${selectedMonth}` };
     }
+
+    // ── RECONCILIATION: Fetch data from Tally sheet (Supabase Sync) ──
+    const tallySheet = ss.getSheetByName("Tally");
+    const tallyMap = {}; // Key: "date|agentname"
+    if (tallySheet) {
+      const tallyData = tallySheet.getDataRange().getDisplayValues();
+      if (tallyData.length > 1) {
+        const tHeaders = tallyData[0].map(h => h.trim().toLowerCase());
+        // Map based on: TimeStamp|Date|AgentName|Total (OFD+OFP)|Completed (OFD+OFP)| Image Drive URL
+        const tDateIdx = tHeaders.indexOf('date');
+        const tNameIdx = tHeaders.indexOf('agentname');
+        const tTotalIdx = tHeaders.indexOf('total (ofd+ofp)');
+        const tCompIdx = tHeaders.indexOf('completed (ofd+ofp)');
+        const tImgIdx = tHeaders.indexOf('image drive url');
+        
+        for (let i = 1; i < tallyData.length; i++) {
+          const tRow = tallyData[i];
+          const tDate = parseAndFormatDate(tRow[tDateIdx]);
+          const tName = String(tRow[tNameIdx]).trim();
+          if (tDate && tName) {
+            const key = `${tDate}|${tName}`;
+            tallyMap[key] = {
+              total: Number(tRow[tTotalIdx]) || 0,
+              completed: Number(tRow[tCompIdx]) || 0,
+              imageUrl: tRow[tImgIdx] || ""
+            };
+          }
+        }
+      }
+    }
     
     // Create/reuse monthly payout tab
     const tempTabName = getPayoutTabName(selectedMonth);
@@ -885,46 +1009,71 @@ function prepareTempTabForMonth(selectedMonth) {
       tempSheet = tempSs.insertSheet(tempTabName);
     }
     
-    // Prepare headers for temp tab (original headers minus secondary Date columns + Original Row Index)
+    // Prepare headers for temp tab (Include ALL headers from Agent_view + Reconciliation Columns + Original Row Index)
     const tempHeaders = [];
     headers.forEach((h, i) => {
-      const isSecondaryDate = (i === secondaryDateIdx);
-      if (!isSecondaryDate) {
-        tempHeaders.push(h);
-      }
+      tempHeaders.push(h);
     });
     
-    // Ensure "Payment Status" column exists in temp tab header if it was missing
-    const tempCleanHeaders = tempHeaders.map(h => String(h).trim().toLowerCase());
-    let statusColIdx = tempCleanHeaders.indexOf('payment status');
-    if (statusColIdx === -1) {
-      tempHeaders.push("Payment Status");
-      statusColIdx = tempHeaders.length - 1;
-    }
-    
+    // Add side-by-side reconciliation headers
+    tempHeaders.push("Payment Status");
+    tempHeaders.push("Supabase Total (OFD+OFP)");
+    tempHeaders.push("Supabase Completed (OFD+OFP)");
+    tempHeaders.push("Reconciliation Status");
+    tempHeaders.push("Supabase Image Link");
     tempHeaders.push("Original Row Index (Do Not Edit)");
     
     // Write headers
     tempSheet.getRange(1, 1, 1, tempHeaders.length).setValues([tempHeaders]);
     tempSheet.getRange(1, 1, 1, tempHeaders.length).setFontWeight("bold").setBackground("#f1f5f9");
     
+    // Map headers for Agent_view values
+    const cleanMainHeaders = headers.map(h => h.trim().toLowerCase());
+    const findCol = (name) => cleanMainHeaders.indexOf(name.toLowerCase());
+    const idx = {
+      name: findCol('AgentName'),
+      ofd: findCol('OFD'),
+      ofp: findCol('OFP'),
+      del: findCol('del_update'),
+      pickup: findCol('Picked-up')
+    };
+
     // Prepare values to write, substituting the Date with the normalized precise date
     const writeData = matchingRows.map(item => {
       const rowValues = [];
       item.values.forEach((val, i) => {
-        const isSecondaryDate = (i === secondaryDateIdx);
-        if (!isSecondaryDate) {
-          if (i === dateIdx) {
-            rowValues.push(item.formattedDate); // Write precise normalized date!
-          } else {
-            rowValues.push(val);
-          }
+        if (i === dateIdx) {
+          rowValues.push(item.formattedDate); // Write precise normalized date!
+        } else {
+          rowValues.push(val);
         }
       });
       
-      while (rowValues.length < tempHeaders.length - 1) {
+      // Add empty value for Payment Status
+      rowValues.push("");
+
+      // Reconciliation Logic: Match Tally data (Supabase Sync)
+      const agentName = String(item.values[idx.name]).trim();
+      const matchKey = `${item.formattedDate}|${agentName}`;
+      const tMatch = tallyMap[matchKey];
+      
+      const avTotal = (Number(item.values[idx.ofd]) || 0) + (Number(item.values[idx.ofp]) || 0);
+      const avCompleted = (Number(item.values[idx.del]) || 0) + (Number(item.values[idx.pickup]) || 0);
+      
+      if (tMatch) {
+        rowValues.push(tMatch.total);
+        rowValues.push(tMatch.completed);
+        
+        const isMatch = (avTotal === tMatch.total && avCompleted === tMatch.completed);
+        rowValues.push(isMatch ? "✅ Matched" : "⚠️ Discrepancy Found");
+        rowValues.push(tMatch.imageUrl);
+      } else {
+        rowValues.push(0);
+        rowValues.push(0);
+        rowValues.push("❌ No Supabase Record");
         rowValues.push("");
       }
+
       rowValues.push(item.originalRowIndex);
       return rowValues;
     });

@@ -13,7 +13,8 @@ import { SUPABASE_URL, SUPABASE_ANON_KEY } from "../config";
  * TrackerPage — image upload and OCR orchestrator.
  */
 export default function TrackerPage({ agentName }) {
-  const today = formatDate();
+  const [selectedDate, setSelectedDate] = useState(new Date());
+  const formattedDate = formatDate(selectedDate);
 
   // ── image state ───────────────────────────────────────────────────
   const [imageState, setImageState] = useState(null);
@@ -93,10 +94,10 @@ export default function TrackerPage({ agentName }) {
 
     const fileExt = imageState?.file?.name?.split(".").pop() || "jpeg";
     const safeAgentName = agentName.trim().replace(/[^a-zA-Z0-9]/g, "_");
-    const customImageName = `${safeAgentName}_${today}_${Date.now()}.${fileExt}`;
+    const customImageName = `${safeAgentName}_${formattedDate}_${Date.now()}.${fileExt}`;
 
     await submit({
-      date:           today,
+      date:           formattedDate,
       agentName,
       totalCount:     ocrResult?.totalCount,
       completedCount: ocrResult?.completedCount,
@@ -106,7 +107,7 @@ export default function TrackerPage({ agentName }) {
       fileHash:       imageState?.fileHash, // Pass hash to submit
     });
     setPhase("result");
-  }, [submit, today, agentName, ocrResult, imageState]);
+  }, [submit, formattedDate, agentName, ocrResult, imageState]);
 
   const handleCancel = useCallback(() => {
     setPhase("confirm"); // just close modal, keep data
@@ -131,7 +132,7 @@ export default function TrackerPage({ agentName }) {
           result={submitResult}
           onReset={handleReset}
           agentName={agentName}
-          date={today}
+          date={formattedDate}
           totalCount={ocrResult?.totalCount}
           completedCount={ocrResult?.completedCount}
         />
@@ -146,10 +147,36 @@ export default function TrackerPage({ agentName }) {
 
       {/* Upload card */}
       <div className="card upload-card">
-        <h2 className="card-title">Today&apos;s Summary</h2>
+        <h2 className="card-title">Work Summary</h2>
         <p className="card-subtitle">
-          Upload your end-of-day Summary screenshot
+          Select date and upload your end-of-day Summary screenshot
         </p>
+
+        <div className="date-selection" style={{ marginBottom: '20px' }}>
+          <label htmlFor="upload-date" className="input-label" style={{ display: 'block', marginBottom: '8px', fontSize: '14px', fontWeight: '600', color: 'var(--text-muted)' }}>
+            Working Date
+          </label>
+          <input
+            id="upload-date"
+            type="date"
+            className="input-field"
+            value={selectedDate.toISOString().split('T')[0]}
+            max={new Date().toISOString().split('T')[0]}
+            onChange={(e) => setSelectedDate(new Date(e.target.value))}
+            disabled={phase === "ocr" || phase === "submitting"}
+            style={{ 
+              width: '100%', 
+              padding: '12px', 
+              borderRadius: '12px', 
+              border: '1.5px solid var(--border)', 
+              backgroundColor: 'var(--card-bg)', 
+              color: 'var(--text)', 
+              fontSize: '16px',
+              opacity: (phase === "ocr" || phase === "submitting") ? 0.6 : 1
+            }}
+          />
+        </div>
+
         <ScreenshotUploader
           onImageSelected={handleImageSelected}
           disabled={phase === "ocr" || phase === "submitting"}
@@ -181,7 +208,7 @@ export default function TrackerPage({ agentName }) {
       <ConfirmModal
         visible={phase === "confirm" || phase === "submitting"}
         agentName={agentName}
-        date={today}
+        date={formattedDate}
         totalCount={ocrResult?.totalCount ?? "—"}
         completedCount={ocrResult?.completedCount ?? "—"}
         previewUrl={imageState?.previewUrl}
