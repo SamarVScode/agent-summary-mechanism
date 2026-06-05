@@ -29,7 +29,8 @@ function processSupabaseSubmissions() {
     const response = UrlFetchApp.fetch(url, {
       method: "GET",
       headers: {
-        "apikey": SUPABASE_KEY
+        "apikey": SUPABASE_KEY,
+        "Authorization": "Bearer " + SUPABASE_KEY
       }
     });
 
@@ -51,7 +52,7 @@ function processSupabaseSubmissions() {
 
     for (let i = 0; i < submissions.length; i++) {
       const item = submissions[i];
-      Logger.log(`Syncing submission for: ${item.agent_name}`);
+      Logger.log(`Syncing submission for: ${item.agent_name} (ID: ${item.casper_id})`);
 
       let driveUrl = "";
       if (item.image_url) {
@@ -97,6 +98,7 @@ function processSupabaseSubmissions() {
         method: "PATCH",
         headers: {
           "apikey": SUPABASE_KEY,
+          "Authorization": "Bearer " + SUPABASE_KEY,
           "Content-Type": "application/json"
         },
         payload: JSON.stringify({ processed: true })
