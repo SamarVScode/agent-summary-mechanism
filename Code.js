@@ -178,7 +178,7 @@ function testDoGet() {
  */
 function fetchSubmissionsFromSupabase() {
   try {
-    const url = `${SUPABASE_URL}/rest/v1/submissions?select=date,agent_name,total_count,completed_count`;
+    const url = `${SUPABASE_URL}/rest/v1/submissions?select=date,agent_name,casper_id,total_count,completed_count`;
     const response = UrlFetchApp.fetch(url, {
       method: "GET",
       headers: {
@@ -254,9 +254,9 @@ function getSheetData() {
 
   // 1. Fetch Supabase Submissions
   const submissions = fetchSubmissionsFromSupabase();
-  const subMap = {}; // Keyed by date + agent_name
+  const subMap = {}; // Keyed by date + agent_name + casper_id
   submissions.forEach(s => {
-    const key = `${s.date}_${s.agent_name}`;
+    const key = `${s.date}_${s.agent_name}_${s.casper_id}`;
     subMap[key] = {
       total: s.total_count,
       completed: s.completed_count
@@ -355,9 +355,10 @@ function getSheetData() {
     
     const formattedDate = parseAndFormatDate(row[idx.date]);
     const agentName = row[idx.name] || "Unknown";
+    const casperId = row[idx.id] || "N/A";
     
     // Fetch matching Supabase data
-    const subKey = `${formattedDate}_${agentName}`;
+    const subKey = `${formattedDate}_${agentName}_${casperId}`;
     const subData = subMap[subKey] || { total: null, completed: null };
     
     const dailyEarnings = (delivered + pickedUp) * RATE_PER_TASK;
