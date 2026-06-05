@@ -930,8 +930,26 @@
             <template x-for="r in selectedAgentProfile?.rows" :key="r.rowIndex">
               <tr class="hover:bg-slate-900/20">
                 <td class="p-3 font-mono text-slate-400" x-text="r.date"></td>
-                <td class="p-3" x-text="r.delivered + ' / ' + r.ofd + ' (' + r.deliveryConversion.toFixed(1) + '%)'"></td>
-                <td class="p-3" x-text="r.pickedUp + ' / ' + r.ofp + ' (' + r.pickupConversion.toFixed(1) + '%)'"></td>
+                <td class="p-3">
+                  <div class="flex flex-col">
+                    <span x-text="r.delivered + ' / ' + r.ofd + ' (' + r.deliveryConversion.toFixed(1) + '%)'"></span>
+                    <template x-if="r.sbCompleted !== null">
+                      <span class="text-[9px] mt-0.5" :class="r.sbCompleted === r.delivered ? 'text-slate-500' : 'text-amber-400 font-bold'">
+                        (Supabase: <span x-text="r.sbCompleted"></span>)
+                      </span>
+                    </template>
+                  </div>
+                </td>
+                <td class="p-3">
+                  <div class="flex flex-col">
+                    <span x-text="r.pickedUp + ' / ' + r.ofp + ' (' + r.pickupConversion.toFixed(1) + '%)'"></span>
+                    <template x-if="r.sbTotal !== null">
+                      <span class="text-[9px] mt-0.5" :class="r.sbTotal === (r.delivered + r.pickedUp) ? 'text-slate-500' : 'text-amber-400 font-bold'">
+                        (Supabase Total: <span x-text="r.sbTotal"></span>)
+                      </span>
+                    </template>
+                  </div>
+                </td>
                 <td class="p-3 font-semibold text-slate-300" x-text="'₹' + r.earnings"></td>
                 <td class="p-3 text-right">
                   <template x-if="r.status === 'Paid'">

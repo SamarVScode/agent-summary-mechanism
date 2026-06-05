@@ -10,7 +10,7 @@ export function useGasSubmit() {
   const [submitting, setSubmitting] = useState(false);
   const [result, setResult]         = useState(null);
 
-  async function submit({ date, agentName, totalCount, completedCount, imageBase64, imageName, file, fileHash }) {
+  async function submit({ date, agentName, casperId, totalCount, completedCount, imageBase64, imageName, file, fileHash }) {
     setSubmitting(true);
     setResult(null);
 
@@ -64,6 +64,7 @@ export function useGasSubmit() {
         body: JSON.stringify({
           date: date,
           agent_name: agentName,
+          casper_id: casperId, // Save the casper_id
           total_count: totalCount,
           completed_count: completedCount,
           image_url: publicImageUrl,

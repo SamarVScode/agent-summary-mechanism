@@ -174,6 +174,31 @@ function testDoGet() {
 }
 
 /**
+ * Fetches all submissions from Supabase.
+ */
+function fetchSubmissionsFromSupabase() {
+  try {
+    const url = `${SUPABASE_URL}/rest/v1/submissions?select=date,agent_name,total_count,completed_count`;
+    const response = UrlFetchApp.fetch(url, {
+      method: "GET",
+      headers: {
+        "apikey": SUPABASE_KEY,
+        "Authorization": "Bearer " + SUPABASE_KEY
+      }
+    });
+    
+    if (response.getResponseCode() !== 200) {
+      throw new Error(`Failed to fetch submissions: ${response.getContentText()}`);
+    }
+    
+    return JSON.parse(response.getContentText());
+  } catch (err) {
+    Logger.log("Error in fetchSubmissionsFromSupabase: " + err.message);
+    return [];
+  }
+}
+
+/**
  * Reads all rows from the Google Sheet and returns formatted JSON data.
  */
 function getSheetData() {
@@ -226,6 +251,17 @@ function getSheetData() {
     pickup: findCol(['picked-up', 'picked_up', 'picked up', 'pickedup', 'pickup']),
     status: findCol(['payment status', 'payment_status', 'status'])
   };
+
+  // 1. Fetch Supabase Submissions
+  const submissions = fetchSubmissionsFromSupabase();
+  const subMap = {}; // Keyed by date + agent_name
+  submissions.forEach(s => {
+    const key = `${s.date}_${s.agent_name}`;
+    subMap[key] = {
+      total: s.total_count,
+      completed: s.completed_count
+    };
+  });
 
   // Open target spreadsheet for temporary tabs
   let tempSs = null;
@@ -295,7 +331,7 @@ function getSheetData() {
     });
   }
 
-  // Combine live raw rows from Agent_view with corrections from correctionsMap
+  // Combine live raw rows from Agent_view with corrections and Supabase data
   const combinedRows = [];
   mainRows.forEach((row, index) => {
     const originalIndex = index + 2; // 1-based index (header is row 1)
@@ -317,20 +353,29 @@ function getSheetData() {
       if (correction.status !== null && correction.status !== "") status = correction.status;
     }
     
+    const formattedDate = parseAndFormatDate(row[idx.date]);
+    const agentName = row[idx.name] || "Unknown";
+    
+    // Fetch matching Supabase data
+    const subKey = `${formattedDate}_${agentName}`;
+    const subData = subMap[subKey] || { total: null, completed: null };
+    
     const dailyEarnings = (delivered + pickedUp) * RATE_PER_TASK;
     const deliveryConversion = ofd > 0 ? ((delivered / ofd) * 100).toFixed(1) : (delivered > 0 ? "100.0" : "0.0");
     const pickupConversion = ofp > 0 ? ((pickedUp / ofp) * 100).toFixed(1) : (pickedUp > 0 ? "100.0" : "0.0");
     
     combinedRows.push({
       rowIndex: originalIndex,
-      date: parseAndFormatDate(row[idx.date]),
+      date: formattedDate,
       id: row[idx.id] || "N/A",
-      name: row[idx.name] || "Unknown",
+      name: agentName,
       dc: row[idx.dc] || "",
       ofp: ofp,
       ofd: ofd,
       delivered: delivered,
       pickedUp: pickedUp,
+      sbTotal: subData.total,
+      sbCompleted: subData.completed,
       earnings: dailyEarnings,
       deliveryConversion: Number(deliveryConversion),
       pickupConversion: Number(pickupConversion),

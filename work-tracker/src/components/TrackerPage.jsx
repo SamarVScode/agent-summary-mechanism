@@ -12,7 +12,7 @@ import { SUPABASE_URL, SUPABASE_ANON_KEY } from "../config";
 /**
  * TrackerPage — image upload and OCR orchestrator.
  */
-export default function TrackerPage({ agentName }) {
+export default function TrackerPage({ agentName, casperId }) {
   const [selectedDate, setSelectedDate] = useState(new Date());
   const formattedDate = formatDate(selectedDate);
 
@@ -99,6 +99,7 @@ export default function TrackerPage({ agentName }) {
     await submit({
       date:           formattedDate,
       agentName,
+      casperId,
       totalCount:     ocrResult?.totalCount,
       completedCount: ocrResult?.completedCount,
       imageBase64:    imageState?.base64,

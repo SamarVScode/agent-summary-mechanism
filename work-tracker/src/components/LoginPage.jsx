@@ -34,7 +34,7 @@ export default function LoginPage({ onLogin }) {
       }
 
       // Success
-      onLogin(data.name);
+      onLogin(data.name, casperId);
     } catch (err) {
       setError(err.message || "An unexpected error occurred");
     } finally {

@@ -21,6 +21,10 @@ WHERE casper_id IS NULL;
 -- This ensures all future agents must have these fields
 ALTER TABLE agents ALTER COLUMN casper_id SET NOT NULL;
 ALTER TABLE agents ALTER COLUMN password SET NOT NULL;
+
+-- Step 4: Add casper_id to submissions table
+ALTER TABLE submissions 
+ADD COLUMN IF NOT EXISTS casper_id TEXT;
 ```
 
 ## 2. Instructions

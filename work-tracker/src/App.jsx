@@ -13,12 +13,12 @@ import { formatDate } from "./utils/dateUtils";
  * Navigation is handled via the Header hamburger menu.
  */
 export default function App() {
-  const { agentName, setAgentName, clearAgentName } = useAgentName();
+  const { agentName, casperId, setAgentInfo, clearAgentInfo } = useAgentName();
   const [currentTab, setCurrentTab] = useState("dashboard");
   const today = formatDate();
 
   if (!agentName) {
-    return <LoginPage onLogin={setAgentName} />;
+    return <LoginPage onLogin={setAgentInfo} />;
   }
 
   return (
@@ -26,7 +26,7 @@ export default function App() {
       <Header
         agentName={agentName}
         date={today}
-        onLogout={clearAgentName}
+        onLogout={clearAgentInfo}
         currentTab={currentTab}
         onTabChange={setCurrentTab}
       />
@@ -35,7 +35,7 @@ export default function App() {
         {currentTab === "dashboard" ? (
           <Dashboard agentName={agentName} />
         ) : (
-          <TrackerPage agentName={agentName} />
+          <TrackerPage agentName={agentName} casperId={casperId} />
         )}
       </main>
     </div>
