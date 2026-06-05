@@ -61,7 +61,7 @@ body {
 
 /* App Header */
 .app-header {
-  padding: 20px 24px 16px;
+  padding: 16px 20px;
   background: var(--surface);
   border-bottom: 1px solid var(--border);
   position: sticky;
@@ -73,19 +73,29 @@ body {
   display: flex;
   justify-content: space-between;
   align-items: center;
-  margin-bottom: 16px;
 }
 
 .header-brand {
   display: flex;
   align-items: center;
-  gap: 8px;
+  gap: 12px;
 }
 
-.header-icon {
-  color: var(--primary);
+.hamburger-btn {
+  background: none;
+  border: none;
+  color: var(--text-primary);
   display: flex;
   align-items: center;
+  justify-content: center;
+  cursor: pointer;
+  padding: 4px;
+  margin-left: -4px;
+  transition: opacity 0.2s;
+}
+
+.hamburger-btn:hover {
+  opacity: 0.7;
 }
 
 .header-title {
@@ -100,25 +110,115 @@ body {
   font-weight: 500;
 }
 
-.header-agent-row {
+/* Sidebar / Side Menu */
+.menu-overlay {
+  position: fixed;
+  inset: 0;
+  background: rgba(0, 0, 0, 0.4);
+  z-index: 100;
+  animation: fadeIn 0.2s ease-out;
+}
+
+.side-menu {
+  position: fixed;
+  left: 0;
+  top: 0;
+  bottom: 0;
+  width: 280px;
+  max-width: 85%;
+  background: var(--surface);
+  z-index: 101;
+  box-shadow: var(--shadow-lg);
+  display: flex;
+  flex-direction: column;
+  animation: slideInRight 0.3s cubic-bezier(0, 0, 0.2, 1);
+}
+
+@keyframes slideInRight {
+  from { transform: translateX(-100%); }
+  to { transform: translateX(0); }
+}
+
+.menu-header {
+  padding: 24px;
+  border-bottom: 1px solid var(--border);
   display: flex;
   justify-content: space-between;
   align-items: center;
 }
 
+.close-menu-btn {
+  background: none;
+  border: none;
+  color: var(--text-secondary);
+  cursor: pointer;
+  display: flex;
+  padding: 4px;
+  transition: color 0.2s;
+}
+
+.close-menu-btn:hover {
+  color: var(--text-primary);
+}
+
+.menu-nav {
+  padding: 16px 12px;
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+}
+
+.menu-item {
+  display: flex;
+  align-items: center;
+  padding: 12px 16px;
+  border-radius: 10px;
+  border: none;
+  background: none;
+  color: var(--text-secondary);
+  font-family: var(--font-sans);
+  font-size: 0.95rem;
+  font-weight: 600;
+  cursor: pointer;
+  transition: all 0.2s;
+  text-align: left;
+}
+
+.menu-item:hover {
+  background: var(--bg);
+  color: var(--text-primary);
+}
+
+.menu-item.active {
+  background: #eff6ff;
+  color: var(--primary);
+}
+
+.menu-divider {
+  height: 1px;
+  background: var(--border);
+  margin: 12px 16px;
+}
+
+.logout-item {
+  color: var(--error);
+}
+
+.logout-item:hover {
+  background: #fef2f2;
+  color: var(--error);
+}
+
+/* Agent Badge in Menu */
 .agent-badge {
   display: flex;
   align-items: center;
-  gap: 10px;
-  background: var(--bg);
-  border: 1px solid var(--border);
-  padding: 4px 14px 4px 4px;
-  border-radius: 20px;
+  gap: 12px;
 }
 
 .agent-badge-avatar {
-  width: 28px;
-  height: 28px;
+  width: 36px;
+  height: 36px;
   background: var(--primary);
   color: #fff;
   border-radius: 50%;
@@ -126,65 +226,36 @@ body {
   align-items: center;
   justify-content: center;
   font-weight: 700;
-  font-size: 0.85rem;
+  font-size: 1rem;
 }
 
 .agent-badge-name {
-  font-size: 0.9rem;
-  font-weight: 600;
-}
-
-.btn-change-name {
-  background: none;
-  border: none;
-  color: var(--text-secondary);
-  font-size: 0.8rem;
-  font-weight: 600;
-  cursor: pointer;
-  display: flex;
-  align-items: center;
-  padding: 6px 12px;
-  border-radius: 12px;
-  transition: all 0.2s;
-}
-
-.btn-change-name:hover {
-  background: var(--surface-hover);
+  font-size: 1rem;
+  font-weight: 700;
   color: var(--text-primary);
 }
 
-/* Nav Tabs */
-.nav-tabs {
+/* Login Form */
+.login-form {
   display: flex;
-  gap: 8px;
-  margin-top: 16px;
-  background: var(--bg);
-  padding: 4px;
-  border-radius: 12px;
-  border: 1px solid var(--border);
+  flex-direction: column;
 }
 
-.nav-tab {
-  flex: 1;
-  padding: 8px 16px;
-  border: none;
-  background: transparent;
-  color: var(--text-secondary);
-  font-size: 0.9rem;
-  font-weight: 600;
-  border-radius: 8px;
-  cursor: pointer;
-  transition: all 0.2s;
+.login-submit-btn {
+  margin-top: 12px;
+  height: 52px;
+  font-size: 1rem;
+  font-weight: 700;
+  letter-spacing: 0.02em;
 }
 
-.nav-tab:hover {
-  color: var(--text-primary);
+.login-submit-btn:hover:not(:disabled) {
+  background: var(--primary-hover) !important;
 }
 
-.nav-tab.active {
-  background: var(--surface);
-  color: var(--primary);
-  box-shadow: var(--shadow-sm);
+.login-submit-btn:disabled {
+  opacity: 0.7;
+  cursor: not-allowed;
 }
 
 .page-main {

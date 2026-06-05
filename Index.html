@@ -168,7 +168,7 @@
   </header>
 
   <!-- Tabs Navigation Bar below Header -->
-  <nav class="max-w-7xl mx-auto px-6 pt-6 no-print">
+  <nav class="max-w-7xl mx-auto px-6 pt-6 no-print relative z-40">
     <div class="flex flex-wrap gap-2 border-b border-slate-850 pb-3">
       <!-- Overview Hub -->
       <button @click="currentView = 'overview'" 
@@ -772,6 +772,7 @@
               <label class="text-[10px] uppercase font-bold text-slate-400 block tracking-wider mb-2">Agent Full Name:</label>
               <input type="text" x-model="newAgentName" placeholder="Enter agent name..." 
                      class="w-full bg-slate-950/60 border border-slate-800 focus:border-indigo-500 focus:ring-1 focus:ring-indigo-500/30 p-3 rounded-xl text-xs text-slate-200 outline-none transition duration-150">
+              <p class="text-[9px] text-slate-500 mt-2 italic">Credentials will be automatically fetched from the Agent_view sheet.</p>
             </div>
             <button @click="addAgent()" 
                     :disabled="processing || !newAgentName"
@@ -800,13 +801,15 @@
               </thead>
               <tbody class="divide-y divide-slate-800/60 text-xs text-slate-200">
                 <template x-for="agent in agentsList" :key="agent">
-                  <tr class="hover:bg-slate-800/30 transition">
+                  <tr class="hover:bg-slate-800/30 transition" :class="deletingAgentName === agent ? 'opacity-40 pointer-events-none' : ''">
                     <td class="p-4 font-medium" x-text="agent"></td>
                     <td class="p-4 text-right">
                       <button @click="removeAgent(agent)" 
-                              class="text-rose-500 hover:text-rose-400 p-2 transition"
+                              :disabled="processing || deletingAgentName !== ''"
+                              class="text-rose-500 hover:text-rose-400 p-2 transition disabled:opacity-50 disabled:cursor-not-allowed"
                               title="Remove Agent">
-                        <i class="fa-solid fa-trash-can"></i>
+                        <i class="fa-solid fa-trash-can" x-show="deletingAgentName !== agent"></i>
+                        <i class="fa-solid fa-circle-notch fa-spin text-[11px]" x-show="deletingAgentName === agent"></i>
                       </button>
                     </td>
                   </tr>
@@ -1035,7 +1038,7 @@
   </div>
 
   <!-- MODAL: Startup Month Selection -->
-  <div x-show="showInitialMonthModal" class="fixed inset-0 z-[110] flex items-center justify-center p-4 bg-slate-950/90 backdrop-blur-xl no-print" x-transition>
+  <div x-show="showInitialMonthModal && currentView !== 'manage_agents'" class="fixed inset-0 z-30 flex items-center justify-center p-4 bg-slate-950/90 backdrop-blur-xl no-print" x-transition>
     <div class="glass max-w-md w-full rounded-2xl overflow-hidden shadow-2xl p-6 border border-slate-700/60 flex flex-col justify-between">
       
       <!-- Icon & Header -->
@@ -1118,6 +1121,7 @@
         // Agent Management State
         agentsList: [],
         newAgentName: '',
+        deletingAgentName: '',
         loadingAgents: false,
         
         // Data and Filters State
@@ -1222,7 +1226,10 @@
         },
 
         addAgent() {
-          if (!this.newAgentName) return;
+          if (!this.newAgentName) {
+            this.addToast("Agent name is required.", "error");
+            return;
+          }
           this.processing = true;
           
           if (typeof google === 'undefined') {
@@ -1255,11 +1262,13 @@
         removeAgent(name) {
           if (!confirm(`Are you sure you want to remove '${name}' from the agent list?`)) return;
           this.processing = true;
+          this.deletingAgentName = name;
           
           if (typeof google === 'undefined') {
             setTimeout(() => {
               this.agentsList = this.agentsList.filter(a => a !== name);
               this.addToast(`[Mock] Agent '${name}' removed successfully.`);
+              this.deletingAgentName = '';
               this.processing = false;
             }, 800);
             return;
@@ -1269,13 +1278,18 @@
             .withSuccessHandler(res => {
               if (res.success) {
                 this.addToast(res.message);
+                this.agentsList = this.agentsList.filter(a => a !== name); // Local filter to prevent flicker
                 this.loadAgents();
+              } else {
+                this.addToast(res.message || 'Failed to remove agent.', 'error');
               }
+              this.deletingAgentName = '';
               this.processing = false;
             })
             .withFailureHandler(err => {
               console.error(err);
               this.addToast(`Failed to remove agent: ${err.message}`, "error");
+              this.deletingAgentName = '';
               this.processing = false;
             })
             .removeAgentFromSupabase(name);

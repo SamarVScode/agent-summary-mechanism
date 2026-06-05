@@ -1,6 +1,6 @@
 import { useState } from "react";
 import { useAgentName } from "./hooks/useAgentName";
-import AgentPicker  from "./components/AgentPicker";
+import LoginPage    from "./components/LoginPage";
 import TrackerPage  from "./components/TrackerPage";
 import Dashboard    from "./components/Dashboard";
 import Header       from "./components/Header";
@@ -8,8 +8,9 @@ import { formatDate } from "./utils/dateUtils";
 
 /**
  * App — root component.
- * Shows AgentPicker on first visit (no name in localStorage),
+ * Shows LoginPage on first visit (no name in localStorage),
  * then shows Dashboard or TrackerPage for all subsequent visits.
+ * Navigation is handled via the Header hamburger menu.
  */
 export default function App() {
   const { agentName, setAgentName, clearAgentName } = useAgentName();
@@ -17,7 +18,7 @@ export default function App() {
   const today = formatDate();
 
   if (!agentName) {
-    return <AgentPicker onSelect={setAgentName} />;
+    return <LoginPage onLogin={setAgentName} />;
   }
 
   return (
@@ -25,25 +26,10 @@ export default function App() {
       <Header
         agentName={agentName}
         date={today}
-        onChangeName={clearAgentName}
+        onLogout={clearAgentName}
+        currentTab={currentTab}
+        onTabChange={setCurrentTab}
       />
-
-      <div style={{ padding: "0 24px" }}>
-        <div className="nav-tabs">
-          <button
-            className={`nav-tab ${currentTab === "dashboard" ? "active" : ""}`}
-            onClick={() => setCurrentTab("dashboard")}
-          >
-            Dashboard
-          </button>
-          <button
-            className={`nav-tab ${currentTab === "upload" ? "active" : ""}`}
-            onClick={() => setCurrentTab("upload")}
-          >
-            Upload Summary
-          </button>
-        </div>
-      </div>
 
       <main className="page-main">
         {currentTab === "dashboard" ? (

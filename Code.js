@@ -39,11 +39,38 @@ function fetchAgentsFromSupabase() {
 
 /**
  * Adds a new agent name to the Supabase agents table.
+ * Automatically fetches CasperFHRID from the Agent_view sheet to use as credentials.
  */
 function addAgentToSupabase(agentName) {
   try {
     if (!agentName) throw new Error("Agent name is required.");
     
+    // 1. Fetch credentials from Spreadsheet
+    const ss = SpreadsheetApp.openById(SPREADSHEET_ID);
+    const sheet = ss.getSheetByName(SHEET_TAB_NAME);
+    const data = sheet.getDataRange().getValues();
+    const headers = data[0];
+    
+    const nameIdx = headers.indexOf("Name");
+    const casperIdx = headers.indexOf("CasperFHRID");
+    
+    if (nameIdx === -1 || casperIdx === -1) {
+      throw new Error("Could not find 'Name' or 'CasperFHRID' columns in Agent_view sheet.");
+    }
+    
+    let credentials = null;
+    for (let i = 1; i < data.length; i++) {
+      if (data[i][nameIdx].toString().trim() === agentName.trim()) {
+        credentials = data[i][casperIdx].toString().trim();
+        break;
+      }
+    }
+    
+    if (!credentials) {
+      throw new Error(`Agent "${agentName}" not found in Agent_view sheet.`);
+    }
+
+    // 2. Sync to Supabase
     const url = `${SUPABASE_URL}/rest/v1/agents`;
     const response = UrlFetchApp.fetch(url, {
       method: "POST",
@@ -53,7 +80,11 @@ function addAgentToSupabase(agentName) {
         "Content-Type": "application/json",
         "Prefer": "return=minimal"
       },
-      payload: JSON.stringify({ name: agentName }),
+      payload: JSON.stringify({ 
+        name: agentName,
+        casper_id: credentials,
+        password: credentials
+      }),
       muteHttpExceptions: true
     });
     
@@ -63,7 +94,7 @@ function addAgentToSupabase(agentName) {
       throw new Error(`Failed to add agent: ${errText}`);
     }
     
-    return { success: true, message: `Agent '${agentName}' added successfully.` };
+    return { success: true, message: `Agent '${agentName}' added successfully with automated credentials.` };
   } catch (err) {
     Logger.log("Error in addAgentToSupabase: " + err.message);
     throw err;
@@ -163,7 +194,7 @@ function getSheetData() {
   // Identify all date columns and pick the second one (precise date) by direct comparison
   let dateOccurrences = [];
   for (let i = 0; i < mainHeaders.length; i++) {
-    if (String(mainHeaders[i]).trim() === 'Date') {
+    if (String(mainHeaders[i]).trim().toLowerCase() === 'date') {
       dateOccurrences.push(i);
     }
   }
@@ -654,7 +685,7 @@ function bulkUpdateRowStatuses(rowIndexes, status, sheet) {
       const mainHeaders = mainData[0];
       let dateOccurrences = [];
       for (let i = 0; i < mainHeaders.length; i++) {
-        if (String(mainHeaders[i]).trim() === 'Date') {
+        if (String(mainHeaders[i]).trim().toLowerCase() === 'date') {
           dateOccurrences.push(i);
         }
       }
@@ -930,14 +961,13 @@ function prepareTempTabForMonth(selectedMonth) {
     
     let dateOccurrences = [];
     for (let i = 0; i < headers.length; i++) {
-      if (String(headers[i]).trim() === 'Date') {
+      if (String(headers[i]).trim().toLowerCase() === 'date') {
         dateOccurrences.push(i);
       }
     }
     
     // Identify date columns. We use the second one as primary and first as secondary.
     const dateIdx = dateOccurrences.length >= 2 ? dateOccurrences[1] : (dateOccurrences.length > 0 ? dateOccurrences[0] : -1);
-    const secondaryDateIdx = dateOccurrences.length >= 2 ? dateOccurrences[0] : -1;
     
     if (dateIdx === -1) {
       throw new Error("Date column not found in sheet.");
@@ -968,35 +998,7 @@ function prepareTempTabForMonth(selectedMonth) {
       return { success: false, message: `No transaction rows found matching month: ${selectedMonth}` };
     }
 
-    // ── RECONCILIATION: Fetch data from Tally sheet (Supabase Sync) ──
-    const tallySheet = ss.getSheetByName("Tally");
-    const tallyMap = {}; // Key: "date|agentname"
-    if (tallySheet) {
-      const tallyData = tallySheet.getDataRange().getDisplayValues();
-      if (tallyData.length > 1) {
-        const tHeaders = tallyData[0].map(h => h.trim().toLowerCase());
-        // Map based on: TimeStamp|Date|AgentName|Total (OFD+OFP)|Completed (OFD+OFP)| Image Drive URL
-        const tDateIdx = tHeaders.indexOf('date');
-        const tNameIdx = tHeaders.indexOf('agentname');
-        const tTotalIdx = tHeaders.indexOf('total (ofd+ofp)');
-        const tCompIdx = tHeaders.indexOf('completed (ofd+ofp)');
-        const tImgIdx = tHeaders.indexOf('image drive url');
-        
-        for (let i = 1; i < tallyData.length; i++) {
-          const tRow = tallyData[i];
-          const tDate = parseAndFormatDate(tRow[tDateIdx]);
-          const tName = String(tRow[tNameIdx]).trim();
-          if (tDate && tName) {
-            const key = `${tDate}|${tName}`;
-            tallyMap[key] = {
-              total: Number(tRow[tTotalIdx]) || 0,
-              completed: Number(tRow[tCompIdx]) || 0,
-              imageUrl: tRow[tImgIdx] || ""
-            };
-          }
-        }
-      }
-    }
+
     
     // Create/reuse monthly payout tab
     const tempTabName = getPayoutTabName(selectedMonth);
@@ -1009,34 +1011,16 @@ function prepareTempTabForMonth(selectedMonth) {
       tempSheet = tempSs.insertSheet(tempTabName);
     }
     
-    // Prepare headers for temp tab (Include ALL headers from Agent_view + Reconciliation Columns + Original Row Index)
+    // Prepare headers for temp tab (Include ALL headers from Agent_view + Payment Status + Original Row Index)
     const tempHeaders = [];
-    headers.forEach((h, i) => {
-      tempHeaders.push(h);
-    });
+    tempHeaders.push(...headers);
     
-    // Add side-by-side reconciliation headers
     tempHeaders.push("Payment Status");
-    tempHeaders.push("Supabase Total (OFD+OFP)");
-    tempHeaders.push("Supabase Completed (OFD+OFP)");
-    tempHeaders.push("Reconciliation Status");
-    tempHeaders.push("Supabase Image Link");
     tempHeaders.push("Original Row Index (Do Not Edit)");
     
     // Write headers
     tempSheet.getRange(1, 1, 1, tempHeaders.length).setValues([tempHeaders]);
     tempSheet.getRange(1, 1, 1, tempHeaders.length).setFontWeight("bold").setBackground("#f1f5f9");
-    
-    // Map headers for Agent_view values
-    const cleanMainHeaders = headers.map(h => h.trim().toLowerCase());
-    const findCol = (name) => cleanMainHeaders.indexOf(name.toLowerCase());
-    const idx = {
-      name: findCol('AgentName'),
-      ofd: findCol('OFD'),
-      ofp: findCol('OFP'),
-      del: findCol('del_update'),
-      pickup: findCol('Picked-up')
-    };
 
     // Prepare values to write, substituting the Date with the normalized precise date
     const writeData = matchingRows.map(item => {
@@ -1052,28 +1036,7 @@ function prepareTempTabForMonth(selectedMonth) {
       // Add empty value for Payment Status
       rowValues.push("");
 
-      // Reconciliation Logic: Match Tally data (Supabase Sync)
-      const agentName = String(item.values[idx.name]).trim();
-      const matchKey = `${item.formattedDate}|${agentName}`;
-      const tMatch = tallyMap[matchKey];
-      
-      const avTotal = (Number(item.values[idx.ofd]) || 0) + (Number(item.values[idx.ofp]) || 0);
-      const avCompleted = (Number(item.values[idx.del]) || 0) + (Number(item.values[idx.pickup]) || 0);
-      
-      if (tMatch) {
-        rowValues.push(tMatch.total);
-        rowValues.push(tMatch.completed);
-        
-        const isMatch = (avTotal === tMatch.total && avCompleted === tMatch.completed);
-        rowValues.push(isMatch ? "✅ Matched" : "⚠️ Discrepancy Found");
-        rowValues.push(tMatch.imageUrl);
-      } else {
-        rowValues.push(0);
-        rowValues.push(0);
-        rowValues.push("❌ No Supabase Record");
-        rowValues.push("");
-      }
-
+      // Write the original row index
       rowValues.push(item.originalRowIndex);
       return rowValues;
     });
@@ -1082,7 +1045,7 @@ function prepareTempTabForMonth(selectedMonth) {
     tempSheet.getRange(2, 1, writeData.length, tempHeaders.length).setValues(writeData);
     
     // Format Date columns to plain text to avoid shifts
-    tempSheet.getRange(2, 1, writeData.length, 1).setNumberFormat("@");
+    tempSheet.getRange(2, dateIdx + 1, writeData.length, 1).setNumberFormat("@");
     
     // Auto-fit columns
     tempSheet.autoResizeColumns(1, tempHeaders.length);
@@ -1148,7 +1111,7 @@ function syncTempTabEdits(tempTabName) {
     // Identify the primary date column index in the main sheet
     const mainDateColIndices = [];
     for (let i = 0; i < cleanMainHeaders.length; i++) {
-      if (cleanMainHeaders[i].includes('date')) {
+      if (cleanMainHeaders[i] === 'date') {
         mainDateColIndices.push(i);
       }
     }
@@ -1190,8 +1153,9 @@ function syncTempTabEdits(tempTabName) {
         const headerName = cleanTempHeaders[c];
         let mainColIdx = -1;
         
-        if (headerName === 'date') {
-          mainColIdx = mainDateIdx;
+        // Match columns 1:1 if the schema orders align, otherwise look up by header name
+        if (c < cleanMainHeaders.length && cleanTempHeaders[c] === cleanMainHeaders[c]) {
+          mainColIdx = c;
         } else {
           mainColIdx = cleanMainHeaders.indexOf(headerName);
         }
@@ -1208,7 +1172,12 @@ function syncTempTabEdits(tempTabName) {
           const isBothNumeric = !isNaN(numTempVal) && !isNaN(numMainVal) && cleanTempVal !== "" && cleanMainVal !== "";
           
           let isDifferent = false;
-          if (isBothNumeric) {
+          if (headerName === 'date') {
+            // Case-insensitive date comparison using parseAndFormatDate
+            const normTemp = parseAndFormatDate(tempVal);
+            const normMain = parseAndFormatDate(mainVal);
+            isDifferent = normTemp !== normMain;
+          } else if (isBothNumeric) {
             isDifferent = numTempVal !== numMainVal;
           } else {
             isDifferent = cleanTempVal !== cleanMainVal;
@@ -1397,7 +1366,7 @@ function getUniqueMonths() {
     const headers = data[0];
     let dateOccurrences = [];
     for (let i = 0; i < headers.length; i++) {
-      if (String(headers[i]).trim() === 'Date') {
+      if (String(headers[i]).trim().toLowerCase() === 'date') {
         dateOccurrences.push(i);
       }
     }
