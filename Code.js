@@ -49,19 +49,21 @@ function addAgentToSupabase(agentName) {
     const ss = SpreadsheetApp.openById(SPREADSHEET_ID);
     const sheet = ss.getSheetByName(SHEET_TAB_NAME);
     const data = sheet.getDataRange().getValues();
-    const headers = data[0];
+    const headers = data[0].map(h => String(h).trim().toLowerCase());
     
-    const nameIdx = headers.indexOf("Name");
-    const casperIdx = headers.indexOf("CasperFHRID");
+    const nameIdx = headers.indexOf("agentname");
+    const casperIdx = headers.indexOf("casperfhrid");
     
     if (nameIdx === -1 || casperIdx === -1) {
-      throw new Error("Could not find 'Name' or 'CasperFHRID' columns in Agent_view sheet.");
+      throw new Error("Could not find 'AgentName' or 'CasperFHRID' columns in Agent_view sheet.");
     }
     
     let credentials = null;
+    const searchName = agentName.trim().toLowerCase();
+    
     for (let i = 1; i < data.length; i++) {
-      if (data[i][nameIdx].toString().trim() === agentName.trim()) {
-        credentials = data[i][casperIdx].toString().trim();
+      if (String(data[i][nameIdx]).trim().toLowerCase() === searchName) {
+        credentials = String(data[i][casperIdx]).trim();
         break;
       }
     }
