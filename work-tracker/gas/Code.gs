@@ -79,12 +79,13 @@ function processSupabaseSubmissions() {
         }
       }
 
-      // Append row to sheet: Timestamp | Date | Agent Name | Total (OFD+OFP) | Completed (Del+PU) | Image URL
+      // Append row to sheet: Timestamp | Date | Agent Name | Casper ID | Total (OFD+OFP) | Completed (Del+PU) | Image URL
       const timestamp = item.created_at || new Date().toISOString();
       sheet.appendRow([
         timestamp,
         item.date || "",
         item.agent_name || "",
+        item.casper_id || "",
         item.total_count || 0,
         item.completed_count || 0,
         driveUrl
