@@ -17,7 +17,7 @@ export default function App() {
   const [currentTab, setCurrentTab] = useState("dashboard");
   const today = formatDate();
 
-  if (!agentName) {
+  if (!agentName || !casperId) {
     return <LoginPage onLogin={setAgentInfo} />;
   }
 

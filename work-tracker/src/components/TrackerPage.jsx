@@ -108,7 +108,7 @@ export default function TrackerPage({ agentName, casperId }) {
       fileHash:       imageState?.fileHash, // Pass hash to submit
     });
     setPhase("result");
-  }, [submit, formattedDate, agentName, ocrResult, imageState]);
+  }, [submit, formattedDate, agentName, ocrResult, imageState, casperId]);
 
   const handleCancel = useCallback(() => {
     setPhase("confirm"); // just close modal, keep data

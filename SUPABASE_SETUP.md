@@ -1,35 +1,55 @@
 # Supabase Database Setup
 
-To enable the new login system, automated credential synchronization, and precise side-by-side reconciliation, please run the following SQL script in your **Supabase SQL Editor**.
+To enable the new login system, automated credential synchronization, and precise side-by-side reconciliation, please run the following SQL script in your **Supabase SQL Editor**. This script will create the necessary tables if they don't exist and add the required columns.
 
-## 1. Schema Update Script
+## 1. Full Schema Script
 
 ```sql
--- Step 1: Add columns for agent authentication (if they don't already exist)
-ALTER TABLE agents 
-ADD COLUMN IF NOT EXISTS casper_id TEXT UNIQUE,
-ADD COLUMN IF NOT EXISTS password TEXT;
+-- 1. Create or Update 'agents' table
+CREATE TABLE IF NOT EXISTS agents (
+  id uuid DEFAULT gen_random_uuid() PRIMARY KEY,
+  name text NOT NULL UNIQUE,
+  casper_id text UNIQUE,
+  password text,
+  created_at timestamp with time zone DEFAULT timezone('utc'::text, now()) NOT NULL
+);
 
--- Step 2: Initialize existing agents with default credentials
--- This uses their name (lowercase, spaces replaced with dots) as a fallback
+-- Ensure columns exist if table was already there
+ALTER TABLE agents ADD COLUMN IF NOT EXISTS casper_id TEXT UNIQUE;
+ALTER TABLE agents ADD COLUMN IF NOT EXISTS password TEXT;
+
+-- Initialize existing agents with default credentials
 UPDATE agents 
 SET casper_id = LOWER(REPLACE(name, ' ', '.')), 
     password = LOWER(REPLACE(name, ' ', '.'))
 WHERE casper_id IS NULL;
 
--- Step 3: Enforce NOT NULL constraints on agents table
--- This ensures all future agents must have these fields
+-- Enforce constraints
 ALTER TABLE agents ALTER COLUMN casper_id SET NOT NULL;
 ALTER TABLE agents ALTER COLUMN password SET NOT NULL;
 
--- Step 4: Add casper_id to submissions table for triple-matching
--- This allows matching by (Date + Agent Name + Casper ID)
-ALTER TABLE submissions 
-ADD COLUMN IF NOT EXISTS casper_id TEXT;
 
--- Step 5: (Recommended) Create an index for optimized matching performance
-CREATE INDEX IF NOT EXISTS idx_submissions_matching 
-ON submissions(date, agent_name, casper_id);
+-- 2. Create or Update 'submissions' table
+CREATE TABLE IF NOT EXISTS submissions (
+  id uuid DEFAULT gen_random_uuid() PRIMARY KEY,
+  date text NOT NULL, -- e.g., "03-jun-2026"
+  agent_name text NOT NULL,
+  casper_id text,
+  total_count integer,
+  completed_count integer,
+  image_url text NOT NULL,
+  file_hash text UNIQUE, 
+  processed boolean DEFAULT false,
+  created_at timestamp with time zone DEFAULT timezone('utc'::text, now()) NOT NULL
+);
+
+-- Ensure casper_id exists if table was already there
+ALTER TABLE submissions ADD COLUMN IF NOT EXISTS casper_id TEXT;
+
+-- 3. Create Optimized Indices
+CREATE INDEX IF NOT EXISTS idx_submissions_agent_name ON submissions(agent_name);
+CREATE INDEX IF NOT EXISTS idx_submissions_file_hash ON submissions(file_hash);
+CREATE INDEX IF NOT EXISTS idx_submissions_matching ON submissions(date, agent_name, casper_id);
 ```
 
 ## 2. Instructions
@@ -44,3 +64,4 @@ ON submissions(date, agent_name, casper_id);
 Once finished, your database will be fully compatible with:
 *   The updated **GAS Management Dashboard** (Automated Sync & Reconciliation).
 *   The updated **Work Tracker App** (Secure Login & Tracking).
+*   The **GAS Sync Script** (Populating the Tally sheet).
