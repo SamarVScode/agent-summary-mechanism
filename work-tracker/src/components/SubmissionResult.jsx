@@ -1,6 +1,5 @@
 /**
  * SubmissionResult — success or error card shown after submit.
- * Props: result { success, imageUrl, error } | null, onReset, agentName, date, totalCount, completedCount
  */
 export default function SubmissionResult({
   result,
@@ -14,46 +13,48 @@ export default function SubmissionResult({
 
   if (result.success) {
     return (
-      <div className="result-card result-card--success">
-        <div className="result-icon success-checkmark">
-          <svg width="48" height="48" viewBox="0 0 24 24" fill="none" stroke="var(--success)" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
+      <div className="result-card" style={{ border: '1px solid var(--success)', background: 'oklch(0.7 0.15 150 / 0.05)' }}>
+        <div className="result-icon">
+          <svg width="64" height="64" viewBox="0 0 24 24" fill="none" stroke="var(--success)" strokeWidth="3" strokeLinecap="round" strokeLinejoin="round">
             <polyline points="20 6 9 17 4 12"></polyline>
           </svg>
         </div>
-        <h2 className="result-title">Submitted Successfully!</h2>
-        <p className="result-meta">
-          {date} · {agentName}
+        <h2 className="result-title" style={{ color: 'var(--success)' }}>Job Well Done!</h2>
+        <p className="card-subtitle">
+          Logging work for <strong>{agentName}</strong> on <strong>{date}</strong>.
         </p>
-        <div className="result-counts">
-          <div className="result-count-item">
-            <span className="result-count-label">Total</span>
-            <span className="result-count-value">{totalCount}</span>
+
+        <div className="card" style={{ width: '100%', padding: 'var(--space-md)', background: 'var(--surface)' }}>
+          <div className="profile-item" style={{ borderBottom: '1px solid var(--border)' }}>
+            <label>Total Work</label>
+            <span style={{ fontWeight: '800' }}>{totalCount}</span>
           </div>
-          <div className="result-count-divider" />
-          <div className="result-count-item">
-            <span className="result-count-label">Completed</span>
-            <span className="result-count-value">{completedCount}</span>
+          <div className="profile-item" style={{ borderBottom: 'none' }}>
+            <label>Completed Tasks</label>
+            <span style={{ fontWeight: '800', color: 'var(--success)' }}>{completedCount}</span>
           </div>
         </div>
 
-        <button className="btn-ghost result-reset-btn" onClick={onReset}>
-          Submit Another
+        <button className="btn-primary" onClick={onReset} style={{ marginTop: '16px' }}>
+          Log Another Day
         </button>
       </div>
     );
   }
 
   return (
-    <div className="result-card result-card--error">
-      <div className="result-icon error-cross">
-        <svg width="48" height="48" viewBox="0 0 24 24" fill="none" stroke="var(--error)" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
-          <line x1="18" y1="6" x2="6" y2="18"></line>
-          <line x1="6" y1="6" x2="18" y2="18"></line>
+    <div className="result-card" style={{ border: '1px solid var(--error)', background: 'oklch(0.6 0.18 25 / 0.05)' }}>
+      <div className="result-icon">
+        <svg width="64" height="64" viewBox="0 0 24 24" fill="none" stroke="var(--error)" strokeWidth="3" strokeLinecap="round" strokeLinejoin="round">
+          <circle cx="12" cy="12" r="10"></circle>
+          <line x1="15" y1="9" x2="9" y2="15"></line>
+          <line x1="9" y1="9" x2="15" y2="15"></line>
         </svg>
       </div>
-      <h2 className="result-title">Submission Failed</h2>
-      <p className="result-error-msg">{result.error}</p>
-      <button className="btn-primary" onClick={onReset}>
+      <h2 className="result-title" style={{ color: 'var(--error)' }}>Submission Failed</h2>
+      <p className="card-subtitle" style={{ color: 'var(--error)' }}>{result.error}</p>
+      
+      <button className="btn-primary" onClick={onReset} style={{ background: 'var(--error)', marginTop: '16px' }}>
         Try Again
       </button>
     </div>

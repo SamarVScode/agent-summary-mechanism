@@ -13,7 +13,7 @@ import { SUPABASE_URL, SUPABASE_ANON_KEY } from "../config";
 /**
  * TrackerPage — image upload and OCR orchestrator.
  */
-export default function TrackerPage({ agentName, casperId }) {
+export default function TrackerPage({ agentName, casperId, onSubmissionSuccess }) {
   const [selectedDate, setSelectedDate] = useState(new Date());
   const formattedDate = formatDate(selectedDate);
 
@@ -97,7 +97,7 @@ export default function TrackerPage({ agentName, casperId }) {
     const safeAgentName = agentName.trim().replace(/[^a-zA-Z0-9]/g, "_");
     const customImageName = `${safeAgentName}_${formattedDate}_${Date.now()}.${fileExt}`;
 
-    await submit({
+    const response = await submit({
       date:           formattedDate,
       agentName,
       casperId,
@@ -108,8 +108,12 @@ export default function TrackerPage({ agentName, casperId }) {
       file:           imageState?.file,
       fileHash:       imageState?.fileHash, // Pass hash to submit
     });
+
+    if (response && response.success && onSubmissionSuccess) {
+      onSubmissionSuccess();
+    }
     setPhase("result");
-  }, [submit, formattedDate, agentName, ocrResult, imageState, casperId]);
+  }, [submit, formattedDate, agentName, ocrResult, imageState, casperId, onSubmissionSuccess]);
 
   const handleCancel = useCallback(() => {
     setPhase("confirm"); // just close modal, keep data

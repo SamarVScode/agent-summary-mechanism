@@ -424,6 +424,7 @@ function getSheetData() {
       pickedUp: pickedUp,
       sbTotal: subData.total,
       sbCompleted: subData.completed,
+      rate: agentRate,
       earnings: dailyEarnings,
       deliveryConversion: Number(deliveryConversion),
       pickupConversion: Number(pickupConversion),

@@ -1,12 +1,12 @@
-import { useSubmissions } from "../hooks/useSubmissions";
-
-export default function Dashboard({ agentName, rateAmount = 13 }) {
-  const { submissions, loading, error } = useSubmissions(agentName);
+export default function Dashboard({ rateAmount = 13, submissions = [], loading = false, error = null }) {
 
   if (loading) {
     return (
       <div className="card">
-        <div className="empty-state">Loading your dashboard...</div>
+        <div className="empty-state">
+          <div className="ocr-spinner" style={{ margin: '0 auto 16px' }}></div>
+          Loading your history...
+        </div>
       </div>
     );
   }
@@ -14,7 +14,7 @@ export default function Dashboard({ agentName, rateAmount = 13 }) {
   if (error) {
     return (
       <div className="card">
-        <div className="empty-state" style={{ color: "var(--error)" }}>
+        <div className="empty-state error">
           Error loading data: {error}
         </div>
       </div>
@@ -28,44 +28,47 @@ export default function Dashboard({ agentName, rateAmount = 13 }) {
   const totalEarnings = totalCompleted * rateAmount;
 
   return (
-    <div>
+    <div className="dashboard-view">
       <div className="dashboard-stat-card">
         <div className="dashboard-stat-label">Total Earnings</div>
         <div className="dashboard-stat-value">₹{totalEarnings.toLocaleString()}</div>
+        <div className="dashboard-stat-meta">{totalCompleted} tasks completed</div>
       </div>
 
-      <div className="card">
-        <h2 className="card-title">Recent Submissions</h2>
-        <p className="card-subtitle">Your daily completed tasks and earnings</p>
-
+      <div className="history-section">
+        <h2 className="section-title">Recent Work</h2>
+        
         {submissions.length === 0 ? (
-          <div className="empty-state">No submissions yet. Start uploading your daily summaries!</div>
+          <div className="card">
+            <div className="empty-state">
+              No submissions yet. Start uploading your daily summaries!
+            </div>
+          </div>
         ) : (
-          <div className="dashboard-table-container">
-            <table className="dashboard-table">
-              <thead>
-                <tr>
-                  <th>Date</th>
-                  <th>Total</th>
-                  <th>Completed</th>
-                  <th>Earnings</th>
-                </tr>
-              </thead>
-              <tbody>
-                {submissions.map((sub, idx) => {
-                  const completed = Number(sub.completed_count) || 0;
-                  const earnings = completed * rateAmount;
-                  return (
-                    <tr key={sub.id || idx}>
-                      <td>{sub.date}</td>
-                      <td>{sub.total_count}</td>
-                      <td>{completed}</td>
-                      <td className="earnings-cell">₹{earnings.toLocaleString()}</td>
-                    </tr>
-                  );
-                })}
-              </tbody>
-            </table>
+          <div className="submission-list">
+            {submissions.map((sub, idx) => {
+              const completed = Number(sub.completed_count) || 0;
+              const earnings = completed * rateAmount;
+              return (
+                <div className="card submission-item" key={sub.id || idx}>
+                  <div className="submission-main">
+                    <div className="submission-date">{sub.date}</div>
+                    <div className="submission-stats">
+                      <span className="stat-pill">
+                        Total OFD+OFP <strong>{sub.total_count}</strong>
+                      </span>
+                      <span className="stat-pill success">
+                        DEL+PICKED <strong>{completed}</strong>
+                      </span>
+                    </div>
+                  </div>
+                  <div className="submission-earnings">
+                    <div className="earnings-label">Earned</div>
+                    <div className="earnings-value">₹{earnings.toLocaleString()}</div>
+                  </div>
+                </div>
+              );
+            })}
           </div>
         )}
       </div>

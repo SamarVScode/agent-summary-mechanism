@@ -73,6 +73,45 @@
         display: none !important;
       }
     }
+
+    /* Premium Spinner Animations */
+    .premium-loader {
+      width: 48px;
+      height: 48px;
+      border: 3px solid rgba(99, 102, 241, 0.1);
+      border-radius: 50%;
+      display: inline-block;
+      position: relative;
+      box-sizing: border-box;
+      animation: rotation 1s linear infinite;
+    }
+    .premium-loader::after {
+      content: '';  
+      box-sizing: border-box;
+      position: absolute;
+      left: 0;
+      top: 0;
+      background: #6366f1;
+      width: 12px;
+      height: 12px;
+      transform: translate(-50%, 50%);
+      border-radius: 50%;
+      box-shadow: 0 0 10px #6366f1;
+    }
+    @keyframes rotation {
+      0% { transform: rotate(0deg); }
+      100% { transform: rotate(360deg); }
+    }
+
+    .shimmer {
+      background: linear-gradient(90deg, transparent, rgba(255, 255, 255, 0.05), transparent);
+      background-size: 200% 100%;
+      animation: shimmer 1.5s infinite;
+    }
+    @keyframes shimmer {
+      0% { background-position: -200% 0; }
+      100% { background-position: 200% 0; }
+    }
   </style>
 </head>
 <body class="text-slate-100 min-h-screen" x-data="dashboardApp()">
@@ -100,113 +139,166 @@
 
   <!-- Global Glassmorphic Full-Page Loading Screen -->
   <div x-show="loading" class="fixed inset-0 z-[120] flex flex-col items-center justify-center bg-slate-950/80 backdrop-blur-md no-print" x-transition>
-    <div class="glass p-8 rounded-2xl border border-slate-700/50 shadow-2xl flex flex-col items-center space-y-4 max-w-xs text-center">
-      <div class="relative w-16 h-16 flex items-center justify-center">
-        <!-- Spinners -->
-        <div class="absolute inset-0 rounded-full border-4 border-indigo-500/20"></div>
-        <div class="absolute inset-0 rounded-full border-4 border-indigo-500 border-t-transparent animate-spin"></div>
-        <i class="fa-solid fa-cloud-arrow-down text-indigo-400 text-xl animate-pulse"></i>
+    <div class="glass p-10 rounded-3xl border border-slate-700/50 shadow-2xl flex flex-col items-center space-y-6 max-w-xs text-center relative overflow-hidden">
+      <div class="shimmer absolute inset-0 opacity-20 pointer-events-none"></div>
+      <div class="relative flex items-center justify-center">
+        <div class="premium-loader"></div>
+        <div class="absolute inset-0 flex items-center justify-center">
+          <i class="fa-solid fa-cloud-arrow-down text-indigo-400 text-lg animate-pulse"></i>
+        </div>
       </div>
       <div>
-        <h4 class="text-sm font-bold text-white tracking-wide">Syncing Payout Data</h4>
-        <p class="text-[10px] text-slate-400 mt-1 leading-relaxed">Retrieving ledger details and initializing secure administrative corrections tab...</p>
+        <h4 class="text-md font-extrabold text-white tracking-tight uppercase">Initializing Ledger</h4>
+        <p class="text-[10px] text-slate-400 mt-2 leading-relaxed font-medium">Synchronizing raw transaction logs and preparing secure administrative corrections tab...</p>
       </div>
     </div>
   </div>
 
-  <!-- Top Navigation Bar -->
-  <header class="border-b border-slate-800/80 bg-[#111827]/40 backdrop-blur sticky top-0 z-40 px-6 py-4 flex flex-wrap items-center justify-between gap-4 no-print">
-    <div class="flex items-center space-x-3">
-      <div class="bg-gradient-to-tr from-indigo-600 to-indigo-500 p-2.5 rounded-xl text-white shadow-lg shadow-indigo-500/20">
-        <i class="fa-solid fa-chart-line text-xl"></i>
-      </div>
-      <div>
-        <h1 class="text-lg font-bold tracking-tight text-white flex items-center">
-          Wishmaster Payout Dashboard
-          <span class="ml-2 text-[10px] bg-indigo-500/10 text-indigo-400 px-2 py-0.5 rounded-full border border-indigo-500/20">v1.2</span>
-        </h1>
-        <p class="text-xs text-slate-400">High-End Performance, Conversion & Earnings Panel</p>
-      </div>
-    </div>
-    
-    <!-- Environment & Synchronization -->
-    <div class="flex flex-wrap items-center gap-4">
-      <!-- Selected Month Static Badge -->
-      <div class="flex items-center space-x-2 bg-indigo-950/40 border border-indigo-500/25 px-3 py-1.5 rounded-xl select-none">
-        <span class="text-[10px] uppercase font-extrabold tracking-wider text-indigo-400"><i class="fa-solid fa-calendar-days mr-1.5 text-[11px]"></i>Period:</span>
-        <span class="text-xs font-bold text-slate-200" x-text="formatMonthYear(selectedMonth)"></span>
-      </div>
-
-
-        <div class="flex items-center space-x-2">
-          <!-- Syncing State -->
-          <template x-if="loading || processing">
-            <span class="text-xs font-semibold px-2.5 py-1.5 bg-amber-500/10 text-amber-400 border border-amber-500/20 rounded-xl flex items-center space-x-1.5 shadow-sm shadow-amber-500/5 animate-pulse select-none">
-              <i class="fa-solid fa-spinner fa-spin text-amber-400"></i>
-              <span>Syncing...</span>
-            </span>
-          </template>
-          
-          <!-- Synced State -->
-          <template x-if="!(loading || processing)">
-            <span class="text-xs font-semibold px-2.5 py-1.5 bg-emerald-500/10 text-emerald-400 border border-emerald-500/20 rounded-xl flex items-center space-x-1.5 shadow-sm shadow-emerald-500/5 select-none transition duration-300">
-              <i class="fa-solid fa-circle-check text-emerald-400"></i>
-              <span>Synced</span>
-            </span>
-          </template>
+  <!-- Top Navigation & Tabs Bar (Combined Sticky) -->
+  <div class="sticky top-0 z-50 no-print">
+    <div class="bg-slate-950/80 backdrop-blur-xl border-b border-slate-800/80 shadow-2xl">
+      <!-- Top Header -->
+      <header class="max-w-7xl mx-auto px-6 py-4 flex flex-wrap items-center justify-between gap-4">
+        <div class="flex items-center space-x-3">
+          <div class="bg-gradient-to-tr from-indigo-600 to-indigo-500 p-2.5 rounded-xl text-white shadow-lg shadow-indigo-500/20">
+            <i class="fa-solid fa-chart-line text-xl"></i>
+          </div>
+          <div>
+            <h1 class="text-lg font-bold tracking-tight text-white flex items-center">
+              Wishmaster Payout Dashboard
+              <span class="ml-2 text-[10px] bg-indigo-500/10 text-indigo-400 px-2 py-0.5 rounded-full border border-indigo-500/20">v1.2</span>
+            </h1>
+            <p class="text-xs text-slate-400">High-End Performance, Conversion & Earnings Panel</p>
+          </div>
         </div>
+        
+        <!-- Synchronization Status & Environment -->
+        <div class="flex flex-wrap items-center gap-4">
+          <!-- Selected Month Static Badge -->
+          <div class="flex items-center space-x-2 bg-indigo-950/40 border border-indigo-500/25 px-3 py-1.5 rounded-xl select-none">
+            <span class="text-[10px] uppercase font-extrabold tracking-wider text-indigo-400"><i class="fa-solid fa-calendar-days mr-1.5 text-[11px]"></i>Period:</span>
+            <span class="text-xs font-bold text-slate-200" x-text="formatMonthYear(selectedMonth)"></span>
+          </div>
 
+          <div class="flex items-center space-x-2">
+            <!-- Syncing State -->
+            <template x-if="loading || processing">
+              <span class="text-xs font-semibold px-2.5 py-1.5 bg-amber-500/10 text-amber-400 border border-amber-500/20 rounded-xl flex items-center space-x-2 shadow-sm shadow-amber-500/5 select-none transition duration-300">
+                <div class="w-3.5 h-3.5 border-2 border-amber-400/20 border-t-amber-400 rounded-full animate-spin"></div>
+                <span class="animate-pulse">Syncing...</span>
+              </span>
+            </template>
+            
+            <!-- Synced State -->
+            <template x-if="!(loading || processing)">
+              <span class="text-xs font-semibold px-2.5 py-1.5 bg-emerald-500/10 text-emerald-400 border border-emerald-500/20 rounded-xl flex items-center space-x-1.5 shadow-sm shadow-emerald-500/5 select-none transition duration-300">
+                <i class="fa-solid fa-circle-check text-emerald-400"></i>
+                <span>Synced</span>
+              </span>
+            </template>
+          </div>
 
-      <!-- Premium Refresh Dashboard Button -->
-      <button @click="refreshData()" 
-              class="px-3.5 py-1.5 bg-indigo-600/10 hover:bg-indigo-600/20 text-indigo-400 rounded-xl text-xs font-semibold border border-indigo-500/20 hover:border-indigo-500/35 transition flex items-center space-x-2 shadow-lg shadow-indigo-600/5" 
-              :disabled="loading">
-        <i class="fa-solid" :class="loading ? 'fa-spinner fa-spin text-indigo-400' : 'fa-arrows-rotate'"></i>
-        <span x-text="loading ? 'Refreshing...' : 'Refresh Data'"></span>
-      </button>
+          <!-- Premium Refresh Dashboard Button -->
+          <button @click="refreshData()" 
+                  class="px-3.5 py-1.5 bg-indigo-600/10 hover:bg-indigo-600/20 text-indigo-400 rounded-xl text-xs font-semibold border border-indigo-500/20 hover:border-indigo-500/35 transition flex items-center space-x-2 shadow-lg shadow-indigo-600/5 group" 
+                  :disabled="loading">
+            <template x-if="loading">
+              <div class="w-3.5 h-3.5 border-2 border-indigo-400/20 border-t-indigo-400 rounded-full animate-spin"></div>
+            </template>
+            <template x-if="!loading">
+              <i class="fa-solid fa-arrows-rotate group-hover:rotate-180 transition-transform duration-500"></i>
+            </template>
+            <span x-text="loading ? 'Refreshing...' : 'Refresh Data'"></span>
+          </button>
+        </div>
+      </header>
+
+      <!-- Tabs Navigation Bar below Header -->
+      <nav class="max-w-7xl mx-auto px-6 pb-4">
+        <div class="flex flex-wrap gap-2 border-t border-slate-800/40 pt-4">
+          <!-- Overview Hub -->
+          <button @click="currentView = 'overview'" 
+                  class="px-4 py-2.5 rounded-xl text-xs font-semibold transition flex items-center space-x-2 border"
+                  :class="currentView === 'overview' ? 'bg-indigo-600 border-indigo-500 text-white shadow-lg shadow-indigo-600/15' : 'bg-slate-900/40 border-slate-800 text-slate-400 hover:text-slate-200 hover:bg-slate-800/40'">
+            <i class="fa-solid fa-house"></i>
+            <span>Overview Hub</span>
+          </button>
+
+          <!-- Wishmaster Directory -->
+          <button @click="currentView = 'wishmasters'" 
+                  class="px-4 py-2.5 rounded-xl text-xs font-semibold transition flex items-center space-x-2 border"
+                  :class="currentView === 'wishmasters' ? 'bg-indigo-600 border-indigo-500 text-white shadow-lg shadow-indigo-600/15' : 'bg-slate-900/40 border-slate-800 text-slate-400 hover:text-slate-200 hover:bg-slate-800/40'">
+            <i class="fa-solid fa-users"></i>
+            <span>Wishmaster Directory</span>
+          </button>
+
+          <!-- Agent Dashboard (Only when selectedWishmaster is set) -->
+          <button x-show="selectedWishmaster !== ''" 
+                  @click="currentView = 'detail'" 
+                  class="px-4 py-2.5 rounded-xl text-xs font-semibold transition flex items-center space-x-2 border"
+                  :class="currentView === 'detail' ? 'bg-indigo-600 border-indigo-500 text-white shadow-lg shadow-indigo-600/15' : 'bg-slate-900/40 border-slate-800 text-slate-400 hover:text-slate-200 hover:bg-slate-800/40'">
+            <i class="fa-solid fa-chart-pie"></i>
+            <span>Agent Dashboard</span>
+          </button>
+
+          <!-- Manage Agents Hub -->
+          <button @click="currentView = 'manage_agents'" 
+                  class="px-4 py-2.5 rounded-xl text-xs font-semibold transition flex items-center space-x-2 border"
+                  :class="currentView === 'manage_agents' ? 'bg-indigo-600 border-indigo-500 text-white shadow-lg shadow-indigo-600/15' : 'bg-slate-900/40 border-slate-800 text-slate-400 hover:text-slate-200 hover:bg-slate-800/40'">
+            <i class="fa-solid fa-user-gear"></i>
+            <span>Manage Agents</span>
+          </button>
+        </div>
+      </nav>
     </div>
-  </header>
-
-  <!-- Tabs Navigation Bar below Header -->
-  <nav class="max-w-7xl mx-auto px-6 pt-6 no-print relative z-40">
-    <div class="flex flex-wrap gap-2 border-b border-slate-850 pb-3">
-      <!-- Overview Hub -->
-      <button @click="currentView = 'overview'" 
-              class="px-4 py-2.5 rounded-xl text-xs font-semibold transition flex items-center space-x-2 border"
-              :class="currentView === 'overview' ? 'bg-indigo-600 border-indigo-500 text-white shadow-lg shadow-indigo-600/15' : 'bg-slate-900/40 border-slate-800 text-slate-400 hover:text-slate-200 hover:bg-slate-800/40'">
-        <i class="fa-solid fa-house"></i>
-        <span>Overview Hub</span>
-      </button>
-
-      <!-- Wishmaster Directory -->
-      <button @click="currentView = 'wishmasters'" 
-              class="px-4 py-2.5 rounded-xl text-xs font-semibold transition flex items-center space-x-2 border"
-              :class="currentView === 'wishmasters' ? 'bg-indigo-600 border-indigo-500 text-white shadow-lg shadow-indigo-600/15' : 'bg-slate-900/40 border-slate-800 text-slate-400 hover:text-slate-200 hover:bg-slate-800/40'">
-        <i class="fa-solid fa-users"></i>
-        <span>Wishmaster Directory</span>
-      </button>
-
-      <!-- Agent Dashboard (Only when selectedWishmaster is set) -->
-      <button x-show="selectedWishmaster !== ''" 
-              @click="currentView = 'detail'" 
-              class="px-4 py-2.5 rounded-xl text-xs font-semibold transition flex items-center space-x-2 border"
-              :class="currentView === 'detail' ? 'bg-indigo-600 border-indigo-500 text-white shadow-lg shadow-indigo-600/15' : 'bg-slate-900/40 border-slate-800 text-slate-400 hover:text-slate-200 hover:bg-slate-800/40'">
-        <i class="fa-solid fa-chart-pie"></i>
-        <span>Agent Dashboard</span>
-      </button>
-
-      <!-- Manage Agents Hub -->
-      <button @click="currentView = 'manage_agents'" 
-              class="px-4 py-2.5 rounded-xl text-xs font-semibold transition flex items-center space-x-2 border"
-              :class="currentView === 'manage_agents' ? 'bg-indigo-600 border-indigo-500 text-white shadow-lg shadow-indigo-600/15' : 'bg-slate-900/40 border-slate-800 text-slate-400 hover:text-slate-200 hover:bg-slate-800/40'">
-        <i class="fa-solid fa-user-gear"></i>
-        <span>Manage Agents</span>
-      </button>
-    </div>
-  </nav>
+  </div>
 
   <!-- Main Dashboard Grid -->
   <main class="max-w-7xl mx-auto p-6 space-y-6 no-print">
+
+    <!-- Global Data Synchronization Control -->
+    <section class="glass p-6 rounded-2xl border border-indigo-500/20 shadow-lg relative overflow-hidden group">
+      <div class="absolute inset-0 bg-gradient-to-r from-indigo-500/5 to-transparent opacity-0 group-hover:opacity-100 transition duration-500 pointer-events-none"></div>
+      <div class="flex flex-col md:flex-row items-center justify-between gap-6 relative z-10">
+        <div class="flex items-center space-x-4">
+          <div class="bg-indigo-500/10 p-3 rounded-xl border border-indigo-500/20 text-indigo-400">
+            <i class="fa-solid fa-calendar-check text-2xl" :class="processing ? 'animate-pulse' : ''"></i>
+          </div>
+          <div>
+            <h4 class="text-sm font-bold text-white tracking-wide">Data Synchronization Control</h4>
+            <p class="text-[10px] text-slate-400">Select an operating month to initialize and sync ledger data.</p>
+          </div>
+        </div>
+        
+        <div class="flex flex-wrap items-center gap-4 w-full md:w-auto">
+          <div class="relative flex-1 md:w-64">
+            <select x-model="selectedInitialMonth" 
+                    :disabled="processing || loadingUniqueMonths"
+                    class="w-full bg-slate-950/60 border border-slate-800 focus:border-indigo-500 focus:ring-1 focus:ring-indigo-500/30 p-2.5 rounded-xl text-xs text-slate-200 font-semibold outline-none cursor-pointer appearance-none transition duration-150 disabled:opacity-50 disabled:cursor-not-allowed">
+              <option class="bg-slate-900 text-slate-400" value="" x-text="loadingUniqueMonths ? 'Fetching months...' : '-- Select Month --'"></option>
+              <template x-for="m in uniqueMonthsList" :key="m">
+                <option class="bg-slate-900 text-slate-200" :value="m" x-text="formatMonthYear(m)"></option>
+              </template>
+            </select>
+            <div class="absolute right-3.5 top-3 pointer-events-none text-slate-500 text-[10px]">
+              <i class="fa-solid fa-chevron-down"></i>
+            </div>
+          </div>
+          
+          <button @click="confirmInitialMonth()" 
+                  :disabled="loadingUniqueMonths || selectedInitialMonth === '' || processing"
+                  class="px-6 py-2.5 bg-gradient-to-r from-indigo-600 to-indigo-500 hover:from-indigo-500 hover:to-indigo-400 disabled:from-slate-800 disabled:to-slate-800 text-white disabled:text-slate-500 rounded-xl text-xs font-bold shadow-lg shadow-indigo-600/20 disabled:shadow-none transition duration-150 flex items-center justify-center space-x-2 w-full md:w-auto">
+            <template x-if="processing">
+              <div class="w-3.5 h-3.5 border-2 border-white/20 border-t-white rounded-full animate-spin"></div>
+            </template>
+            <template x-if="!processing">
+              <i class="fa-solid fa-arrows-rotate"></i>
+            </template>
+            <span x-text="processing ? 'Syncing...' : 'Sync & Load Data'"></span>
+          </button>
+        </div>
+      </div>
+    </section>
 
     <!-- ============================================== -->
     <!-- 1. HOME/OVERVIEW HUB PAGE -->
@@ -663,6 +755,7 @@
                     <i class="fa-solid" :class="sortKey === 'pickupConversion' ? (sortAsc ? 'fa-sort-up ml-1 text-indigo-400' : 'fa-sort-down ml-1 text-indigo-400') : 'fa-sort ml-1 text-slate-600'"></i>
                   </th>
                   <th class="p-4 text-left text-indigo-400 uppercase tracking-wider font-semibold bg-indigo-500/5">Supabase Data (C/T)</th>
+                  <th class="p-4 text-left">Rate (₹)</th>
                   <th class="p-4 cursor-pointer hover:text-indigo-400 transition text-left" @click="sortBy('earnings')">
                     Daily Earning
                     <i class="fa-solid" :class="sortKey === 'earnings' ? (sortAsc ? 'fa-sort-up ml-1 text-indigo-400' : 'fa-sort-down ml-1 text-indigo-400') : 'fa-sort ml-1 text-slate-600'"></i>
@@ -741,6 +834,7 @@
                         <span class="text-[10px] text-slate-500">Supabase Data</span>
                       </div>
                     </td>
+                    <td class="p-4 font-mono text-slate-400" x-text="'₹' + (row.rate || 13)"></td>
                     <td class="p-4 font-bold text-indigo-300" x-text="'₹' + formatNumber(row.earnings)"></td>
                   </tr>
                 </template>
@@ -795,8 +889,12 @@
             <button @click="addAgent()" 
                     :disabled="processing || !newAgentName"
                     class="w-full py-2.5 bg-gradient-to-r from-indigo-600 to-indigo-500 hover:from-indigo-500 hover:to-indigo-400 disabled:from-slate-800 disabled:to-slate-800 text-white disabled:text-slate-500 rounded-xl text-xs font-semibold shadow-lg shadow-indigo-600/20 disabled:shadow-none transition duration-150 flex items-center justify-center space-x-2">
-              <i class="fa-solid fa-plus text-[10px]" x-show="!processing"></i>
-              <i class="fa-solid fa-spinner fa-spin" x-show="processing"></i>
+              <template x-if="processing">
+                <div class="w-3.5 h-3.5 border-2 border-white/20 border-t-white rounded-full animate-spin"></div>
+              </template>
+              <template x-if="!processing">
+                <i class="fa-solid fa-plus text-[10px]"></i>
+              </template>
               <span x-text="processing ? 'Adding Agent...' : 'Add Agent to Database'"></span>
             </button>
           </div>
@@ -841,17 +939,23 @@
                 </template>
                 <template x-if="loadingAgents">
                   <tr>
-                    <td colspan="2" class="p-12 text-center text-slate-400">
-                      <i class="fa-solid fa-spinner fa-spin text-4xl mb-3 text-indigo-500 block"></i>
-                      <span class="font-semibold block text-white text-sm">Fetching agent list...</span>
+                    <td colspan="3" class="p-12 text-center text-slate-400">
+                      <div class="flex flex-col items-center justify-center">
+                        <div class="premium-loader scale-75 mb-4"></div>
+                        <span class="font-bold block text-white text-sm tracking-tight uppercase">Retrieving Personnel Database</span>
+                        <span class="text-[10px] text-slate-500 mt-1">Synchronizing active Wishmaster records from Supabase...</span>
+                      </div>
                     </td>
                   </tr>
                 </template>
                 <template x-if="!loadingAgents && agentsList.length === 0">
                   <tr>
-                    <td colspan="2" class="p-12 text-center text-slate-400">
-                      <i class="fa-solid fa-user-slash text-4xl mb-3 text-slate-700 block"></i>
-                      <span class="font-semibold block text-white text-sm">No agents found in database</span>
+                    <td colspan="3" class="p-12 text-center text-slate-400">
+                      <div class="flex flex-col items-center justify-center">
+                        <i class="fa-solid fa-user-slash text-4xl mb-3 text-slate-800"></i>
+                        <span class="font-bold block text-white text-sm">No records found</span>
+                        <span class="text-[10px] text-slate-500 mt-1">Personnel directory is currently empty.</span>
+                      </div>
                     </td>
                   </tr>
                 </template>
@@ -890,8 +994,12 @@
         <button @click="showBulkConfirmModal = false" class="px-4 py-2 border border-slate-700 text-slate-300 rounded-xl text-xs font-semibold hover:bg-slate-800 transition duration-150">
           Cancel
         </button>
-        <button @click="confirmBulkPayment()" class="px-4 py-2 bg-gradient-to-r from-emerald-600 to-emerald-500 hover:from-emerald-500 hover:to-emerald-400 text-white rounded-xl text-xs font-semibold shadow-lg shadow-emerald-600/30 transition duration-150 flex items-center space-x-2">
-          <i class="fa-solid fa-spinner fa-spin" x-show="processing"></i>
+        <button @click="confirmBulkPayment()" 
+                :disabled="processing"
+                class="px-4 py-2 bg-gradient-to-r from-emerald-600 to-emerald-500 hover:from-emerald-500 hover:to-emerald-400 text-white rounded-xl text-xs font-semibold shadow-lg shadow-emerald-600/30 transition duration-150 flex items-center space-x-2">
+          <template x-if="processing">
+            <div class="w-3.5 h-3.5 border-2 border-white/20 border-t-white rounded-full animate-spin"></div>
+          </template>
           <span x-text="processing ? 'Updating...' : 'Yes, Confirm Payout'"></span>
         </button>
       </div>
@@ -1001,6 +1109,43 @@
         <button @click="showProfileModal = false" class="px-4 py-2 bg-indigo-600 hover:bg-indigo-500 text-white rounded-xl text-xs font-semibold shadow transition">
           Close Profile
         </button>
+      </div>
+    </div>
+  </div>
+
+  <!-- MODAL: Edit Agent Rate -->
+  <div x-show="showEditRateModal" class="fixed inset-0 z-50 flex items-center justify-center p-4 bg-slate-950/80 backdrop-blur-sm no-print" x-transition>
+    <div class="glass max-w-sm w-full rounded-2xl overflow-hidden shadow-2xl p-6 border border-slate-700/80" @click.away="showEditRateModal = false">
+      <div class="flex items-center space-x-3 text-indigo-400 mb-4">
+        <div class="bg-indigo-500/10 p-2.5 rounded-xl border border-indigo-500/20">
+          <i class="fa-solid fa-pen-to-square text-xl"></i>
+        </div>
+        <div>
+          <h4 class="text-md font-bold text-white">Edit Agent Rate</h4>
+          <p class="text-[10px] text-slate-400" x-text="'Updating rate for ' + editingAgent?.name"></p>
+        </div>
+      </div>
+      
+      <div class="space-y-4">
+        <div>
+          <label class="text-[10px] uppercase font-bold text-slate-400 block tracking-wider mb-2">New Rate per Task (₹):</label>
+          <input type="number" x-model="editingAgentRate" step="0.5"
+                 class="w-full bg-slate-950/60 border border-slate-800 focus:border-indigo-500 focus:ring-1 focus:ring-indigo-500/30 p-3 rounded-xl text-xs text-slate-200 outline-none transition duration-150">
+        </div>
+        
+        <div class="flex justify-end space-x-3 mt-6">
+          <button @click="showEditRateModal = false" class="px-4 py-2 border border-slate-700 text-slate-300 rounded-xl text-xs font-semibold hover:bg-slate-800 transition duration-150">
+            Cancel
+          </button>
+          <button @click="confirmEditRate()" 
+                  :disabled="processing"
+                  class="px-4 py-2 bg-gradient-to-r from-indigo-600 to-indigo-500 hover:from-indigo-500 hover:to-indigo-400 text-white rounded-xl text-xs font-semibold shadow-lg shadow-indigo-600/30 transition duration-150 flex items-center space-x-2">
+            <template x-if="processing">
+              <div class="w-3.5 h-3.5 border-2 border-white/20 border-t-white rounded-full animate-spin"></div>
+            </template>
+            <span x-text="processing ? 'Updating...' : 'Save Rate'"></span>
+          </button>
+        </div>
       </div>
     </div>
   </div>
@@ -1138,8 +1283,12 @@
         <button @click="confirmInitialMonth()" 
                 :disabled="loadingUniqueMonths || selectedInitialMonth === '' || processing"
                 class="w-full py-2.5 bg-gradient-to-r from-indigo-600 to-indigo-500 hover:from-indigo-500 hover:to-indigo-400 disabled:from-slate-800 disabled:to-slate-800 text-white disabled:text-slate-500 rounded-xl text-xs font-semibold shadow-lg shadow-indigo-600/20 disabled:shadow-none transition duration-150 flex items-center justify-center space-x-2">
-          <i class="fa-solid fa-circle-play text-[10px]" x-show="!processing"></i>
-          <i class="fa-solid fa-spinner fa-spin" x-show="processing"></i>
+          <template x-if="processing">
+            <div class="w-3.5 h-3.5 border-2 border-white/20 border-t-white rounded-full animate-spin"></div>
+          </template>
+          <template x-if="!processing">
+            <i class="fa-solid fa-circle-play text-[10px]"></i>
+          </template>
           <span x-text="processing ? 'Initializing Month & Sheets...' : 'Access Payout Dashboard'"></span>
         </button>
       </div>
@@ -1156,7 +1305,8 @@
         processing: false,
         showBulkConfirmModal: false,
         showProfileModal: false,
-        showInitialMonthModal: true,
+        showEditRateModal: false,
+        showInitialMonthModal: false,
         loadingUniqueMonths: true,
         uniqueMonthsList: [],
         selectedInitialMonth: '',
@@ -1167,6 +1317,8 @@
         agentsList: [], // Now [{name, rate_amount}, ...]
         newAgentName: '',
         newAgentRate: 13.00,
+        editingAgent: null,
+        editingAgentRate: 13.00,
         deletingAgentName: '',
         loadingAgents: false,
         
@@ -1310,14 +1462,19 @@
         },
 
         openEditRateModal(agent) {
-          const newRate = prompt(`Enter new rate for ${agent.name}:`, agent.rate_amount || 13.00);
-          if (newRate === null) return;
-          
-          const rateVal = parseFloat(newRate);
-          if (isNaN(rateVal)) {
+          this.editingAgent = agent;
+          this.editingAgentRate = agent.rate_amount || 13.00;
+          this.showEditRateModal = true;
+        },
+
+        confirmEditRate() {
+          if (this.editingAgentRate === null || isNaN(this.editingAgentRate)) {
             this.addToast("Invalid rate amount.", "error");
             return;
           }
+
+          const agent = this.editingAgent;
+          const rateVal = parseFloat(this.editingAgentRate);
 
           this.processing = true;
           if (typeof google === 'undefined') {
@@ -1326,6 +1483,7 @@
               if (target) target.rate_amount = rateVal;
               this.addToast(`[Mock] Rate for '${agent.name}' updated to ₹${rateVal}.`);
               this.processing = false;
+              this.showEditRateModal = false;
             }, 800);
             return;
           }
@@ -1337,11 +1495,13 @@
                 this.loadAgents(); // Refresh list
               }
               this.processing = false;
+              this.showEditRateModal = false;
             })
             .withFailureHandler(err => {
               console.error(err);
               this.addToast(`Failed to update rate: ${err.message}`, "error");
               this.processing = false;
+              this.showEditRateModal = false;
             })
             .updateAgentRateInSupabase(agent.name, rateVal);
         },

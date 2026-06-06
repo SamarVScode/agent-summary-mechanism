@@ -6,10 +6,10 @@ export default function OcrLoader({ visible }) {
 
   return (
     <div className="ocr-overlay" role="status" aria-live="polite">
-      <div className="ocr-loader-card">
-        <div className="ocr-spinner" />
-        <p className="ocr-text">Reading screenshot…</p>
-        <p className="ocr-subtext">Extracting your work counts</p>
+      <div className="card" style={{ textAlign: 'center', padding: 'var(--space-xl)', maxWidth: '280px' }}>
+        <div className="ocr-spinner" style={{ margin: '0 auto 24px', width: '48px', height: '48px' }} />
+        <h2 className="card-title">Analyzing...</h2>
+        <p className="card-subtitle">Extracting data from your screenshot</p>
       </div>
     </div>
   );
