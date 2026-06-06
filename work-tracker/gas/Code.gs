@@ -1,7 +1,8 @@
 // ═══════════════════════════════════════════════════════════════════
 //  DAILY WORK TRACKER — Google Apps Script Backend (Supabase Bridge)
 //  Set up these functions to run on triggers:
-//    - processSupabaseSubmissions  --> Time-driven trigger (every 5 mins)
+//    - syncScreenshotsToDrive     --> Run daily at 11:45 PM
+//    - setupDailySyncTrigger      --> Run once manually to create the trigger
 // ═══════════════════════════════════════════════════════════════════
 
 // ── CONFIGURATION ── Fill these in before running ──────────────────
@@ -14,10 +15,11 @@ const SUPABASE_KEY          = "sb_publishable_h4qeENgYle29ywox-PyN3g_A6QG-2XJ"; 
 // ───────────────────────────────────────────────────────────────────
 
 /**
- * processSupabaseSubmissions — pulls unprocessed submissions from Supabase,
+ * syncScreenshotsToDrive — pulls unprocessed submissions from Supabase,
  * uploads images to Drive, appends rows to Google Sheet, and marks them processed.
+ * Designed to run EOD (e.g., 11:45 PM).
  */
-function processSupabaseSubmissions() {
+function syncScreenshotsToDrive() {
   try {
     if (SUPABASE_URL.includes("YOUR_SUPABASE")) {
       return;
@@ -39,7 +41,10 @@ function processSupabaseSubmissions() {
 
     const submissions = JSON.parse(response.getContentText());
 
-    if (submissions.length === 0) return;
+    if (submissions.length === 0) {
+      Logger.log("No new submissions to process.");
+      return;
+    }
 
     const ss = SpreadsheetApp.openById(SPREADSHEET_ID);
     const sheet = ss.getSheetByName(SHEET_TAB_NAME);
@@ -97,13 +102,36 @@ function processSupabaseSubmissions() {
       });
 
       if (patchResponse.getResponseCode() >= 300) {
-        // Failed to mark processed
-      } else {
-        // Successfully synced
+        Logger.log(`Failed to mark submission ${item.id} as processed.`);
       }
     }
 
+    Logger.log(`Successfully processed ${submissions.length} submissions.`);
+
   } catch (err) {
-    // Error running processSupabaseSubmissions
+    Logger.log(`Error in syncScreenshotsToDrive: ${err.message}`);
   }
+}
+
+/**
+ * setupDailySyncTrigger — Sets up a trigger to run every night between 11 PM and midnight.
+ * Run this function ONCE manually from the Apps Script editor to initialize the trigger.
+ */
+function setupDailySyncTrigger() {
+  // Delete existing triggers for this function to avoid duplicates
+  const triggers = ScriptApp.getProjectTriggers();
+  for (let i = 0; i < triggers.length; i++) {
+    if (triggers[i].getHandlerFunction() === "syncScreenshotsToDrive") {
+      ScriptApp.deleteTrigger(triggers[i]);
+    }
+  }
+  
+  // Create a new daily trigger for 11 PM - 12 PM
+  ScriptApp.newTrigger("syncScreenshotsToDrive")
+    .timeBased()
+    .atHour(23)
+    .everyDays(1)
+    .create();
+    
+  Logger.log("EOD Sync Trigger has been set up to run between 11:00 PM and 11:59 PM daily.");
 }
