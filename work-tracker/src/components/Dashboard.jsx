@@ -36,7 +36,7 @@ export default function Dashboard({ rateAmount = 13, submissions = [], loading =
       </div>
 
       <div className="history-section">
-        <h2 className="section-title">Recent Work</h2>
+        <h2 className="section-title" style={{ margin: '24px 0 16px' }}>Recent Work</h2>
         
         {submissions.length === 0 ? (
           <div className="card">

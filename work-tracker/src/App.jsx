@@ -62,7 +62,7 @@ export default function App() {
             </div>
             <div className="profile-item">
               <label>Current Rate</label>
-              <span>₹{rateAmount} / task</span>
+              <span>₹{rateAmount}</span>
             </div>
           </div>
           <button className="btn-ghost logout-item" onClick={clearAgentInfo} style={{ marginTop: '24px', width: '100%', color: 'var(--error)' }}>
