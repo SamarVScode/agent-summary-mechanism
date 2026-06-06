@@ -1,34 +1,79 @@
-# Setup Instructions: Wishmaster Earnings & Performance Dashboard
+# Wishmaster Ecosystem: Performance & Payout Management
 
-Follow these steps to deploy and run your premium, high-fidelity dashboard:
+A dual-application system designed to streamline the workflow for delivery agents and administrators. The ecosystem consists of a mobile-first **Work Tracker** for agents and a premium **Payout Dashboard** for administrators.
 
-### 1. Spreadsheet Setup
-1. In your **Google Sheets**, verify that your first sheet tab is formatted with these exact headers in Row 1:
-   `Date`, `CasperFHRID`, `AgentName`, `Source_DC`, `OFP`, `OFD`, `del_update`, `Picked-up`, `DC Date`
-2. Enter your Wishmaster transaction logs in subsequent rows. Dates should be in format `DD-MM-YYYY` (e.g. `01-06-2026`) or standard string formats like `01-jun-2026`.
-3. Copy your **Spreadsheet ID** from your sheet's browser URL bar.
-4. Note your sheet **Tab Name** (e.g. `Payouts`).
+---
 
-### 2. Apps Script Integration
-1. In your sheet, click **Extensions > Apps Script**.
-2. Delete any boilerplate code inside the editor.
-3. Copy the entire contents of [Code.js](file:///C:/Users/User/Desktop/payout app/Code.js) and paste it into the script editor window. Save it as `Code.gs`.
-4. Update variables on lines 4 and 5 of `Code.gs`:
-   * Set `SPREADSHEET_ID` to your copied sheet ID (or leave as `""` if the script is container-bound to that active sheet).
-   * Set `SHEET_TAB_NAME` to your tab name (e.g., `"Payouts"`).
-5. In the script editor, click the **+** icon next to Files, select **HTML**, and name the file exactly `Index` (do not add the `.html` extension; GAS adds it automatically).
-6. Copy the entire contents of [Index.html](file:///C:/Users/User/Desktop/payout app/Index.html) and paste it inside your `Index.html` editor, replacing all default boilerplate.
-7. Click **Save Project** (the floppy disk icon).
+## 🏗️ System Architecture
 
-### 3. Deploy as a Web App
-1. Click **Deploy > New deployment** in the top right.
-2. Click the gear icon (**Select type**) next to Configuration and select **Web app**.
-3. Configure the settings:
-   * **Description:** Wishmaster Dashboard v1.2
-   * **Execute as:** Me (your email address)
-   * **Who has access:** Anyone (necessary so that the frontend can load correctly; security is fully backed by Google's native authorization framework).
-4. Click **Deploy**.
-5. Copy the generated **Web app URL** and open it in any web browser to view your high-end payout dashboard!
+The ecosystem operates on a **Unified Data Flow** model:
+1.  **Agents** submit work logs via the **React Work Tracker**.
+2.  **Submissions** are stored in **Supabase** (Real-time database).
+3.  **Administrators** monitor, verify, and process payouts via the **GAS Dashboard**, which merges Supabase data with official Google Sheet ledgers.
 
-### 4. Interactive Local Sandbox
-If you double-click or open the local [Index.html](file:///C:/Users/User/Desktop/payout app/Index.html) file directly in a web browser (outside Google Apps Script), it detects the local environment automatically and launches in **Mock Sandbox** mode. All features work perfectly (interactive filters, sorting, real-time Chart.js updates, mock payment confirmation modal, success toasts, and printable agent payslip) using pre-packaged mock records!
+---
+
+## 📱 1. Agent Work Tracker (React + Vite)
+*Located in the `/work-tracker` directory.*
+
+A mobile-responsive web application used by agents to log their daily performance.
+
+### ✨ Key Features
+-   **OCR Integration**: Automatically extracts delivery and pickup counts from screenshots using Tesseract.js.
+-   **Real-time History**: Agents can view their previous submissions stored in Supabase.
+-   **GAS Bridge**: Automatically syncs submissions to a Google Sheet ("Tally" tab) for redundancy.
+-   **Authentication**: Secure login using Casper ID as the unique identifier.
+
+### 🛠️ Setup & Development
+1.  Navigate to the directory: `cd work-tracker`
+2.  Install dependencies: `npm install`
+3.  Start development server: `npm run dev`
+4.  Build for production: `npm run build`
+
+---
+
+## 📊 2. Admin Payout Dashboard (Google Apps Script)
+*Located in the root directory (`Code.js`, `Index.html`).*
+
+A high-end administrative panel for verification, discrepancy analysis, and payment processing.
+
+### ✨ Key Features
+-   **Mismatch Highlighting**: Automatically flags rows where raw Sheet data differs from Supabase records.
+-   **Monthly Payout Isolation**: Generates dedicated monthly tabs in an administrative spreadsheet for secure corrections.
+-   **Real-time Sync**: Explicit button to pull the latest Supabase records into the dashboard.
+-   **Advanced Exports**: Generate professional PDF payslips and CSV logs for accounting.
+-   **Agent Management**: CRUD interface for managing the agent database in Supabase.
+
+### 🛠️ Setup & Deployment
+1.  Open your primary Google Sheet.
+2.  Go to `Extensions` > `Apps Script`.
+3.  Copy `Code.js` and `Index.html` from the root directory into the project.
+4.  Deploy as a **Web App** (Execute as: Me, Access: Anyone).
+
+---
+
+## ⚙️ Shared Configuration
+
+### Supabase Tables
+The system requires the following tables in Supabase:
+-   **`agents`**: `name`, `casper_id`, `password`
+-   **`submissions`**: `date`, `agent_name`, `casper_id`, `total_count`, `completed_count`, `image_url`, `processed`
+
+### Constants
+-   **Primary Spreadsheet ID**: `1avV2Tx9SGaaUeFu2alONmXeXkGYqE4I5r1ZncPYmY7M` (Agent_view)
+-   **Tally Spreadsheet ID**: `1ntacTkjZ6CZV3qHrNaxPYe_lch7ySDTeLuSNS_q_ATQ` (Syncing Tally)
+-   **Rate per Task**: ₹13.00
+
+---
+
+## 🤝 Relationship Overview
+
+| Feature | Agent Work Tracker | Admin Payout Dashboard |
+| :--- | :--- | :--- |
+| **Primary Goal** | Data Entry & OCR | Verification & Payout |
+| **Tech Stack** | React, Vite, Tesseract | Alpine.js, GAS, Tailwind |
+| **Source of Truth** | Supabase | Supabase + Google Sheets |
+| **Sync Interval** | On Submission | On Refresh / Manual Sync |
+
+---
+*Created and Maintained by Gemini CLI Agent*

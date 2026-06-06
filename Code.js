@@ -32,7 +32,6 @@ function fetchAgentsFromSupabase() {
     const agents = JSON.parse(response.getContentText());
     return agents.map(a => a.name);
   } catch (err) {
-    Logger.log("Error in fetchAgentsFromSupabase: " + err.message);
     throw err;
   }
 }
@@ -92,13 +91,11 @@ function addAgentToSupabase(agentName) {
     
     if (response.getResponseCode() >= 300) {
       const errText = response.getContentText();
-      Logger.log(`Failed to add agent: ${errText}`);
       throw new Error(`Failed to add agent: ${errText}`);
     }
     
     return { success: true, message: `Agent '${agentName}' added successfully with automated credentials.` };
   } catch (err) {
-    Logger.log("Error in addAgentToSupabase: " + err.message);
     throw err;
   }
 }
@@ -122,13 +119,11 @@ function removeAgentFromSupabase(agentName) {
     
     if (response.getResponseCode() >= 300) {
       const errText = response.getContentText();
-      Logger.log(`Failed to remove agent: ${errText}`);
       throw new Error(`Failed to remove agent: ${errText}`);
     }
     
     return { success: true, message: `Agent '${agentName}' removed successfully.` };
   } catch (err) {
-    Logger.log("Error in removeAgentFromSupabase: " + err.message);
     throw err;
   }
 }
@@ -190,10 +185,11 @@ function fetchSubmissionsFromSupabase() {
     if (response.getResponseCode() !== 200) {
       throw new Error(`Failed to fetch submissions: ${response.getContentText()}`);
     }
-    
-    return JSON.parse(response.getContentText());
+
+    const data = JSON.parse(response.getContentText());
+    return data;
+
   } catch (err) {
-    Logger.log("Error in fetchSubmissionsFromSupabase: " + err.message);
     return [];
   }
 }
@@ -254,22 +250,26 @@ function getSheetData() {
 
   // 1. Fetch Supabase Submissions
   const submissions = fetchSubmissionsFromSupabase();
-  const subMap = {}; // Keyed by date + agent_name + casper_id
+  const subMap = {}; // Keyed by normalized (date + agent_name + casper_id)
   submissions.forEach(s => {
-    const key = `${s.date}_${s.agent_name}_${s.casper_id}`;
+    const sDate = String(s.date || "").trim().toLowerCase();
+    const sName = String(s.agent_name || "").trim().toLowerCase();
+    const sId = String(s.casper_id || "").trim().toLowerCase();
+    
+    const key = `${sDate}_${sName}_${sId}`;
     subMap[key] = {
       total: s.total_count,
       completed: s.completed_count
     };
   });
 
-  // Open target spreadsheet for temporary tabs
+  // 2. Open target spreadsheet for temporary tabs
   let tempSs = null;
   if (typeof TEMP_SPREADSHEET_ID !== 'undefined' && TEMP_SPREADSHEET_ID) {
     try {
       tempSs = SpreadsheetApp.openById(TEMP_SPREADSHEET_ID);
     } catch (e) {
-      Logger.log("Could not open administrative spreadsheet: " + e.message);
+      // Failed to open administrative spreadsheet
     }
   }
   
@@ -358,7 +358,7 @@ function getSheetData() {
     const casperId = row[idx.id] || "N/A";
     
     // Fetch matching Supabase data
-    const subKey = `${formattedDate}_${agentName}_${casperId}`;
+    const subKey = `${formattedDate}_${agentName.trim().toLowerCase()}_${casperId.trim().toLowerCase()}`;
     const subData = subMap[subKey] || { total: null, completed: null };
     
     const dailyEarnings = (delivered + pickedUp) * RATE_PER_TASK;
@@ -500,15 +500,9 @@ function testCalculations() {
   const delConv = ((del / ofd) * 100).toFixed(1);
   const pickConv = ((pickup / ofp) * 100).toFixed(1);
   
-  Logger.log("Mock Earnings (Expected 351): " + dailyEarnings);
-  Logger.log("Mock Delivery Conv (Expected 90.0): " + delConv);
-  Logger.log("Mock Pickup Conv (Expected 90.0): " + pickConv);
-  
   if (dailyEarnings === 351 && delConv === "90.0" && pickConv === "90.0") {
-    Logger.log("CALCULATION PASS");
     return true;
   } else {
-    Logger.log("CALCULATION FAIL");
     return false;
   }
 }
@@ -802,7 +796,7 @@ function bulkUpdateRowStatuses(rowIndexes, status, sheet) {
         message: "Payout status updated inside your dedicated spreadsheet. Main 'Agent_view' database sheet remains completely untouched!"
       };
     } catch (err) {
-      Logger.log("Error in separate sheet status update: " + err.message);
+      // Failed to update separate sheet status
     }
   }
 
@@ -1464,6 +1458,21 @@ function getUniqueMonths() {
   } catch (e) {
     console.error("Error in getUniqueMonths: " + e.message);
     return [];
+  }
+}
+
+/**
+ * Explicitly triggers a real-time sync between Supabase submissions and the dashboard data.
+ * This is called by the "Real-time Sync" button in the UI.
+ */
+function triggerSync() {
+  try {
+    // 1. We could potentially trigger the processSupabaseSubmissions from the other script if shared,
+    // but here we primarily want to ensure our combined data is fresh.
+    const freshData = getSheetData();
+    return { success: true, message: "Real-time sync completed. Latest Supabase records have been merged with your spreadsheet logs.", data: freshData };
+  } catch (err) {
+    return { success: false, message: "Sync failed: " + err.message };
   }
 }
 

@@ -652,16 +652,17 @@
                     Wishmaster Name & ID
                     <i class="fa-solid" :class="sortKey === 'name' ? (sortAsc ? 'fa-sort-up ml-1 text-indigo-400' : 'fa-sort-down ml-1 text-indigo-400') : 'fa-sort ml-1 text-slate-600'"></i>
                   </th>
-                  <th class="p-4 text-left">Del. Completed/Total</th>
+                  <th class="p-4 text-left">Delivered / Target</th>
                   <th class="p-4 cursor-pointer hover:text-indigo-400 transition text-left" @click="sortBy('deliveryConversion')">
                     Del. Conversion %
                     <i class="fa-solid" :class="sortKey === 'deliveryConversion' ? (sortAsc ? 'fa-sort-up ml-1 text-indigo-400' : 'fa-sort-down ml-1 text-indigo-400') : 'fa-sort ml-1 text-slate-600'"></i>
                   </th>
-                  <th class="p-4 text-left">Pick. Completed/Total</th>
+                  <th class="p-4 text-left">Picked Up / Target</th>
                   <th class="p-4 cursor-pointer hover:text-indigo-400 transition text-left" @click="sortBy('pickupConversion')">
                     Pick. Conversion %
                     <i class="fa-solid" :class="sortKey === 'pickupConversion' ? (sortAsc ? 'fa-sort-up ml-1 text-indigo-400' : 'fa-sort-down ml-1 text-indigo-400') : 'fa-sort ml-1 text-slate-600'"></i>
                   </th>
+                  <th class="p-4 text-left text-indigo-400 uppercase tracking-wider font-semibold bg-indigo-500/5">Supabase Data (C/T)</th>
                   <th class="p-4 cursor-pointer hover:text-indigo-400 transition text-left" @click="sortBy('earnings')">
                     Daily Earning
                     <i class="fa-solid" :class="sortKey === 'earnings' ? (sortAsc ? 'fa-sort-up ml-1 text-indigo-400' : 'fa-sort-down ml-1 text-indigo-400') : 'fa-sort ml-1 text-slate-600'"></i>
@@ -687,13 +688,15 @@
                         <input type="number" 
                                :value="row.delivered"
                                @change="submitInlineEdit(row.rowIndex, 'del_update', $event.target.value)"
-                               class="w-12 text-center bg-slate-950/60 hover:bg-slate-900 border border-slate-800 hover:border-slate-750 focus:border-indigo-500 focus:ring-1 focus:ring-indigo-500/30 text-white font-bold text-xs rounded px-1.5 py-0.5 outline-none transition duration-150 [appearance:textfield] [&::-webkit-outer-spin-button]:appearance-none [&::-webkit-inner-spin-button]:appearance-none"
+                               class="w-12 text-center bg-slate-950/60 hover:bg-slate-900 border border-slate-800 hover:border-slate-750 focus:border-indigo-500 focus:ring-1 focus:ring-indigo-500/30 font-bold text-xs rounded px-1.5 py-0.5 outline-none transition duration-150 [appearance:textfield] [&::-webkit-outer-spin-button]:appearance-none [&::-webkit-inner-spin-button]:appearance-none"
+                               :class="(row.sbTotal !== null && ((row.delivered + row.pickedUp) !== row.sbCompleted || (row.ofd + row.ofp) !== row.sbTotal)) ? 'text-amber-400 border-amber-500/40' : 'text-white'"
                                title="Click to edit Delivered Completed count">
                         <span class="text-slate-500 text-[10px] select-none">/</span>
                         <input type="number" 
                                :value="row.ofd"
                                @change="submitInlineEdit(row.rowIndex, 'ofd', $event.target.value)"
-                               class="w-12 text-center bg-slate-950/40 hover:bg-slate-900 border border-slate-800 hover:border-slate-750 focus:border-indigo-500 focus:ring-1 focus:ring-indigo-500/30 text-slate-400 font-medium text-xs rounded px-1.5 py-0.5 outline-none transition duration-150 [appearance:textfield] [&::-webkit-outer-spin-button]:appearance-none [&::-webkit-inner-spin-button]:appearance-none"
+                               class="w-12 text-center bg-slate-950/40 hover:bg-slate-900 border border-slate-800 hover:border-slate-750 focus:border-indigo-500 focus:ring-1 focus:ring-indigo-500/30 font-medium text-xs rounded px-1.5 py-0.5 outline-none transition duration-150 [appearance:textfield] [&::-webkit-outer-spin-button]:appearance-none [&::-webkit-inner-spin-button]:appearance-none"
+                               :class="(row.sbTotal !== null && ((row.delivered + row.pickedUp) !== row.sbCompleted || (row.ofd + row.ofp) !== row.sbTotal)) ? 'text-amber-400/80 border-amber-500/30' : 'text-slate-400'"
                                title="Click to edit Out for Delivery count">
                       </div>
                     </td>
@@ -710,13 +713,15 @@
                         <input type="number" 
                                :value="row.pickedUp"
                                @change="submitInlineEdit(row.rowIndex, 'picked-up', $event.target.value)"
-                               class="w-12 text-center bg-slate-950/60 hover:bg-slate-900 border border-slate-800 hover:border-slate-750 focus:border-indigo-500 focus:ring-1 focus:ring-indigo-500/30 text-white font-bold text-xs rounded px-1.5 py-0.5 outline-none transition duration-150 [appearance:textfield] [&::-webkit-outer-spin-button]:appearance-none [&::-webkit-inner-spin-button]:appearance-none"
+                               class="w-12 text-center bg-slate-950/60 hover:bg-slate-900 border border-slate-800 hover:border-slate-750 focus:border-indigo-500 focus:ring-1 focus:ring-indigo-500/30 font-bold text-xs rounded px-1.5 py-0.5 outline-none transition duration-150 [appearance:textfield] [&::-webkit-outer-spin-button]:appearance-none [&::-webkit-inner-spin-button]:appearance-none"
+                               :class="(row.sbTotal !== null && ((row.delivered + row.pickedUp) !== row.sbCompleted || (row.ofd + row.ofp) !== row.sbTotal)) ? 'text-amber-400 border-amber-500/40' : 'text-white'"
                                title="Click to edit Pickups Completed count">
                         <span class="text-slate-500 text-[10px] select-none">/</span>
                         <input type="number" 
                                :value="row.ofp"
                                @change="submitInlineEdit(row.rowIndex, 'ofp', $event.target.value)"
-                               class="w-12 text-center bg-slate-950/40 hover:bg-slate-900 border border-slate-800 hover:border-slate-750 focus:border-indigo-500 focus:ring-1 focus:ring-indigo-500/30 text-slate-400 font-medium text-xs rounded px-1.5 py-0.5 outline-none transition duration-150 [appearance:textfield] [&::-webkit-outer-spin-button]:appearance-none [&::-webkit-inner-spin-button]:appearance-none"
+                               class="w-12 text-center bg-slate-950/40 hover:bg-slate-900 border border-slate-800 hover:border-slate-750 focus:border-indigo-500 focus:ring-1 focus:ring-indigo-500/30 font-medium text-xs rounded px-1.5 py-0.5 outline-none transition duration-150 [appearance:textfield] [&::-webkit-outer-spin-button]:appearance-none [&::-webkit-inner-spin-button]:appearance-none"
+                               :class="(row.sbTotal !== null && ((row.delivered + row.pickedUp) !== row.sbCompleted || (row.ofd + row.ofp) !== row.sbTotal)) ? 'text-amber-400/80 border-amber-500/30' : 'text-slate-400'"
                                title="Click to edit Out for Pickup count">
                       </div>
                     </td>
@@ -726,6 +731,14 @@
                           <div class="bg-amber-400 h-1.5 rounded-full" :style="'width: ' + Math.min(row.pickupConversion, 100) + '%'"></div>
                         </div>
                         <span class="font-semibold text-xs text-amber-400 w-12 text-right" x-text="row.pickupConversion.toFixed(1) + '%'"></span>
+                      </div>
+                    </td>
+                    <td class="p-4">
+                      <div class="flex flex-col">
+                        <span class="text-indigo-400 font-bold" 
+                              :class="(row.sbTotal !== null && ((row.delivered + row.pickedUp) !== row.sbCompleted || (row.ofd + row.ofp) !== row.sbTotal)) ? 'text-amber-400 font-bold' : 'text-indigo-400'"
+                              x-text="(row.sbCompleted ?? '-') + ' / ' + (row.sbTotal ?? '-')"></span>
+                        <span class="text-[10px] text-slate-500">Supabase Data</span>
                       </div>
                     </td>
                     <td class="p-4 font-bold text-indigo-300" x-text="'₹' + formatNumber(row.earnings)"></td>
@@ -920,8 +933,8 @@
           <thead>
             <tr class="bg-slate-900 border-b border-slate-800 text-slate-400 font-bold uppercase tracking-wider sticky top-0 z-10">
               <th class="p-3">Date</th>
-              <th class="p-3">Deliveries Completed</th>
-              <th class="p-3">Pickups Completed</th>
+              <th class="p-3">Deliv / Pick (Raw)</th>
+              <th class="p-3 text-indigo-400 bg-indigo-500/5">Supabase Data (C/T)</th>
               <th class="p-3">Earnings</th>
               <th class="p-3 text-right">Status</th>
             </tr>
@@ -932,22 +945,24 @@
                 <td class="p-3 font-mono text-slate-400" x-text="r.date"></td>
                 <td class="p-3">
                   <div class="flex flex-col">
-                    <span x-text="r.delivered + ' / ' + r.ofd + ' (' + r.deliveryConversion.toFixed(1) + '%)'"></span>
-                    <template x-if="r.sbCompleted !== null">
-                      <span class="text-[9px] mt-0.5" :class="r.sbCompleted === r.delivered ? 'text-slate-500' : 'text-amber-400 font-bold'">
-                        (Supabase: <span x-text="r.sbCompleted"></span>)
-                      </span>
-                    </template>
+                    <span class="font-medium" 
+                          :class="(r.sbTotal !== null && ((r.delivered + r.pickedUp) !== r.sbCompleted || (r.ofd + r.ofp) !== r.sbTotal)) ? 'text-amber-400 font-bold' : 'text-slate-300'"
+                          x-text="'Del: ' + r.delivered + '/' + r.ofd"></span>
+                    <span class="" 
+                          :class="(r.sbTotal !== null && ((r.delivered + r.pickedUp) !== r.sbCompleted || (r.ofd + r.ofp) !== r.sbTotal)) ? 'text-amber-400 font-bold' : 'text-slate-500'"
+                          x-text="'Pick: ' + r.pickedUp + '/' + r.ofp"></span>
+                    <div class="mt-1 pt-1 border-t border-slate-800/40 text-[9px] uppercase font-bold"
+                         :class="(r.sbTotal !== null && ((r.delivered + r.pickedUp) !== r.sbCompleted || (r.ofd + r.ofp) !== r.sbTotal)) ? 'text-amber-500' : 'text-slate-600'">
+                       Raw Tally: <span x-text="(r.delivered + r.pickedUp) + ' / ' + (r.ofd + r.ofp)"></span>
+                    </div>
                   </div>
                 </td>
-                <td class="p-3">
+                <td class="p-3 bg-indigo-500/5">
                   <div class="flex flex-col">
-                    <span x-text="r.pickedUp + ' / ' + r.ofp + ' (' + r.pickupConversion.toFixed(1) + '%)'"></span>
-                    <template x-if="r.sbTotal !== null">
-                      <span class="text-[9px] mt-0.5" :class="r.sbTotal === (r.delivered + r.pickedUp) ? 'text-slate-500' : 'text-amber-400 font-bold'">
-                        (Supabase Total: <span x-text="r.sbTotal"></span>)
-                      </span>
-                    </template>
+                    <span class="text-indigo-400 font-bold" 
+                          :class="(r.sbTotal !== null && ((r.delivered + r.pickedUp) !== r.sbCompleted || (r.ofd + r.ofp) !== r.sbTotal)) ? 'text-amber-400 font-bold' : 'text-indigo-400'"
+                          x-text="(r.sbCompleted ?? '-') + ' / ' + (r.sbTotal ?? '-')"></span>
+                    <span class="text-[10px] text-slate-500">Supabase Data</span>
                   </div>
                 </td>
                 <td class="p-3 font-semibold text-slate-300" x-text="'₹' + r.earnings"></td>
@@ -1056,8 +1071,8 @@
   </div>
 
   <!-- MODAL: Startup Month Selection -->
-  <div x-show="showInitialMonthModal && currentView !== 'manage_agents'" class="fixed inset-0 z-30 flex items-center justify-center p-4 bg-slate-950/90 backdrop-blur-xl no-print" x-transition>
-    <div class="glass max-w-md w-full rounded-2xl overflow-hidden shadow-2xl p-6 border border-slate-700/60 flex flex-col justify-between">
+  <div x-show="showInitialMonthModal" class="fixed inset-0 z-[100] flex items-center justify-center p-4 bg-slate-950/90 backdrop-blur-xl no-print" x-transition>
+    <div class="glass max-w-md w-full rounded-2xl overflow-hidden shadow-2xl p-6 border border-slate-700/60 flex flex-col justify-between" @click.away="if(selectedMonth !== 'All') showInitialMonthModal = false">
       
       <!-- Icon & Header -->
       <div class="flex items-center space-x-3 text-indigo-400 mb-4">
@@ -2576,6 +2591,36 @@
             const dVal = parseInt(p2, 10);
             if (!isNaN(yVal) && p0.length === 4 && !isNaN(dVal)) {
               const mVal = parseInt(p1, 10);
+              if (!isNaN(mVal) && mVal >= 1 && mVal <= 12) {
+                return new Date(yVal, mVal - 1, dVal);
+              } else {
+                const cleanMonth = p1.substring(0, 3);
+                const capMonth = cleanMonth.charAt(0).toUpperCase() + cleanMonth.slice(1).toLowerCase();
+                const monthIdx = months.indexOf(capMonth);
+                if (monthIdx !== -1) {
+                  return new Date(yVal, monthIdx, dVal);
+                }
+              }
+            }
+          }
+          
+          const parsed = new Date(cleanStr);
+          return isNaN(parsed.getTime()) ? new Date(0) : parsed;
+        },
+
+        addToast(message, type = 'success') {
+          const id = Date.now();
+          this.toasts.push({ id, message, type });
+          setTimeout(() => {
+            this.toasts = this.toasts.filter(t => t.id !== id);
+          }, 3500);
+        },
+      }
+    }
+  </script>
+</body>
+</html>
+
               if (!isNaN(mVal) && mVal >= 1 && mVal <= 12) {
                 return new Date(yVal, mVal - 1, dVal);
               } else {
