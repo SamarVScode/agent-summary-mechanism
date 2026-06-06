@@ -1,6 +1,6 @@
 import { useSubmissions } from "../hooks/useSubmissions";
 
-export default function Dashboard({ agentName }) {
+export default function Dashboard({ agentName, rateAmount = 13 }) {
   const { submissions, loading, error } = useSubmissions(agentName);
 
   if (loading) {
@@ -21,13 +21,11 @@ export default function Dashboard({ agentName }) {
     );
   }
 
-  const RATE_PER_TASK = 13;
-
   const totalCompleted = submissions.reduce((sum, sub) => {
     return sum + (Number(sub.completed_count) || 0);
   }, 0);
 
-  const totalEarnings = totalCompleted * RATE_PER_TASK;
+  const totalEarnings = totalCompleted * rateAmount;
 
   return (
     <div>
@@ -56,7 +54,7 @@ export default function Dashboard({ agentName }) {
               <tbody>
                 {submissions.map((sub, idx) => {
                   const completed = Number(sub.completed_count) || 0;
-                  const earnings = completed * RATE_PER_TASK;
+                  const earnings = completed * rateAmount;
                   return (
                     <tr key={sub.id || idx}>
                       <td>{sub.date}</td>

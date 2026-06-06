@@ -18,7 +18,7 @@ export default function LoginPage({ onLogin }) {
     try {
       const { data, error: sbError } = await supabase
         .from("agents")
-        .select("name, password")
+        .select("name, password, rate_amount")
         .eq("casper_id", casperId)
         .single();
 
@@ -34,7 +34,7 @@ export default function LoginPage({ onLogin }) {
       }
 
       // Success
-      onLogin(data.name, casperId);
+      onLogin(data.name, casperId, data.rate_amount);
     } catch (err) {
       setError(err.message || "An unexpected error occurred");
     } finally {

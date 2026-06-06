@@ -28,24 +28,26 @@ function parseCountsFromOcr(rawText) {
   let totalCount     = null;
   let completedCount = null;
 
+  const getTokensAbove = (index) => {
+    const prevLine = index > 0 ? lines[index - 1] : lines[index];
+    return prevLine.match(/\d+/g) || [];
+  };
+
   for (let i = 0; i < lines.length; i++) {
     const lower = lines[i].toLowerCase();
 
     // ── Find "Total" label ──────────────────────────────────────────
     if (lower.includes("total") && !lower.includes("completed")) {
-      // Number is on the line directly above (or same line as a fallback)
-      const prevLine = i > 0 ? lines[i - 1] : lines[i];
-      const tokens   = prevLine.match(/\d+/g);
-      if (tokens && tokens.length > 0) {
+      const tokens = getTokensAbove(i);
+      if (tokens.length > 0) {
         totalCount = parseInt(tokens[0], 10); // left-most number = Total
       }
     }
 
     // ── Find "Completed" label ──────────────────────────────────────
     if (lower.includes("completed")) {
-      const prevLine = i > 0 ? lines[i - 1] : lines[i];
-      const tokens   = prevLine.match(/\d+/g);
-      if (tokens && tokens.length > 0) {
+      const tokens = getTokensAbove(i);
+      if (tokens.length > 0) {
         completedCount = parseInt(tokens[tokens.length - 1], 10); // right-most = Completed
       }
     }

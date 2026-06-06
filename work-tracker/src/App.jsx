@@ -13,7 +13,7 @@ import { formatDate } from "./utils/dateUtils";
  * Navigation is handled via the Header hamburger menu.
  */
 export default function App() {
-  const { agentName, casperId, setAgentInfo, clearAgentInfo } = useAgentName();
+  const { agentName, casperId, rateAmount, setAgentInfo, clearAgentInfo } = useAgentName();
   const [currentTab, setCurrentTab] = useState("dashboard");
   const today = formatDate();
 
@@ -33,7 +33,7 @@ export default function App() {
 
       <main className="page-main">
         {currentTab === "dashboard" ? (
-          <Dashboard agentName={agentName} />
+          <Dashboard agentName={agentName} rateAmount={rateAmount} />
         ) : (
           <TrackerPage agentName={agentName} casperId={casperId} />
         )}

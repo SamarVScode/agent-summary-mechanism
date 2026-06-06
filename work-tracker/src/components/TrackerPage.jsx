@@ -3,6 +3,7 @@ import ScreenshotUploader from "./ScreenshotUploader";
 import OcrLoader          from "./OcrLoader";
 import ConfirmModal       from "./ConfirmModal";
 import SubmissionResult   from "./SubmissionResult";
+import DateSelector       from "./DateSelector";
 import { useOcrExtract }  from "../hooks/useOcrExtract";
 import { useGasSubmit }   from "../hooks/useGasSubmit";
 import { formatDate }     from "../utils/dateUtils";
@@ -153,30 +154,11 @@ export default function TrackerPage({ agentName, casperId }) {
           Select date and upload your end-of-day Summary screenshot
         </p>
 
-        <div className="date-selection" style={{ marginBottom: '20px' }}>
-          <label htmlFor="upload-date" className="input-label" style={{ display: 'block', marginBottom: '8px', fontSize: '14px', fontWeight: '600', color: 'var(--text-muted)' }}>
-            Working Date
-          </label>
-          <input
-            id="upload-date"
-            type="date"
-            className="input-field"
-            value={selectedDate.toISOString().split('T')[0]}
-            max={new Date().toISOString().split('T')[0]}
-            onChange={(e) => setSelectedDate(new Date(e.target.value))}
-            disabled={phase === "ocr" || phase === "submitting"}
-            style={{ 
-              width: '100%', 
-              padding: '12px', 
-              borderRadius: '12px', 
-              border: '1.5px solid var(--border)', 
-              backgroundColor: 'var(--card-bg)', 
-              color: 'var(--text)', 
-              fontSize: '16px',
-              opacity: (phase === "ocr" || phase === "submitting") ? 0.6 : 1
-            }}
-          />
-        </div>
+        <DateSelector
+          selectedDate={selectedDate}
+          onChange={setSelectedDate}
+          disabled={phase === "ocr" || phase === "submitting"}
+        />
 
         <ScreenshotUploader
           onImageSelected={handleImageSelected}

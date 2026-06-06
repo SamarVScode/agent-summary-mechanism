@@ -16,7 +16,7 @@ const SUPABASE_KEY = "sb_publishable_h4qeENgYle29ywox-PyN3g_A6QG-2XJ";
  */
 function fetchAgentsFromSupabase() {
   try {
-    const url = `${SUPABASE_URL}/rest/v1/agents?select=name&order=name.asc`;
+    const url = `${SUPABASE_URL}/rest/v1/agents?select=name,rate_amount&order=name.asc`;
     const response = UrlFetchApp.fetch(url, {
       method: "GET",
       headers: {
@@ -24,13 +24,13 @@ function fetchAgentsFromSupabase() {
         "Authorization": "Bearer " + SUPABASE_KEY
       }
     });
-    
+
     if (response.getResponseCode() !== 200) {
       throw new Error(`Failed to fetch agents: ${response.getContentText()}`);
     }
-    
+
     const agents = JSON.parse(response.getContentText());
-    return agents.map(a => a.name);
+    return agents; // Returns [{name, rate_amount}, ...]
   } catch (err) {
     throw err;
   }
@@ -40,9 +40,10 @@ function fetchAgentsFromSupabase() {
  * Adds a new agent name to the Supabase agents table.
  * Automatically fetches CasperFHRID from the Agent_view sheet to use as credentials.
  */
-function addAgentToSupabase(agentName) {
+function addAgentToSupabase(agentName, rateAmount) {
   try {
     if (!agentName) throw new Error("Agent name is required.");
+    const rate = parseFloat(rateAmount) || 13.00;
     
     // 1. Fetch credentials from Spreadsheet
     const ss = SpreadsheetApp.openById(SPREADSHEET_ID);
@@ -84,7 +85,8 @@ function addAgentToSupabase(agentName) {
       payload: JSON.stringify({ 
         name: agentName,
         casper_id: credentials,
-        password: credentials
+        password: credentials,
+        rate_amount: rate
       }),
       muteHttpExceptions: true
     });
@@ -94,7 +96,42 @@ function addAgentToSupabase(agentName) {
       throw new Error(`Failed to add agent: ${errText}`);
     }
     
-    return { success: true, message: `Agent '${agentName}' added successfully with automated credentials.` };
+    return { success: true, message: `Agent '${agentName}' added successfully with rate ₹${rate}.` };
+  } catch (err) {
+    throw err;
+  }
+}
+
+/**
+ * Updates an agent's rate amount in Supabase.
+ */
+function updateAgentRateInSupabase(agentName, newRate) {
+  try {
+    if (!agentName) throw new Error("Agent name is required.");
+    const rate = parseFloat(newRate);
+    if (isNaN(rate)) throw new Error("Invalid rate amount.");
+
+    const url = `${SUPABASE_URL}/rest/v1/agents?name=eq.${encodeURIComponent(agentName)}`;
+    const response = UrlFetchApp.fetch(url, {
+      method: "PATCH",
+      headers: {
+        "apikey": SUPABASE_KEY,
+        "Authorization": "Bearer " + SUPABASE_KEY,
+        "Content-Type": "application/json",
+        "Prefer": "return=minimal"
+      },
+      payload: JSON.stringify({ 
+        rate_amount: rate
+      }),
+      muteHttpExceptions: true
+    });
+
+    if (response.getResponseCode() >= 300) {
+      const errText = response.getContentText();
+      throw new Error(`Failed to update agent rate: ${errText}`);
+    }
+
+    return { success: true, message: `Agent '${agentName}' rate updated to ₹${rate}.` };
   } catch (err) {
     throw err;
   }
@@ -248,7 +285,7 @@ function getSheetData() {
     status: findCol(['payment status', 'payment_status', 'status'])
   };
 
-  // 1. Fetch Supabase Submissions
+  // 1. Fetch Supabase Submissions & Agents for Rates
   const submissions = fetchSubmissionsFromSupabase();
   const subMap = {}; // Keyed by normalized (date + agent_name + casper_id)
   submissions.forEach(s => {
@@ -261,6 +298,14 @@ function getSheetData() {
       total: s.total_count,
       completed: s.completed_count
     };
+  });
+
+  // Fetch agents for dynamic rates
+  const agents = fetchAgentsFromSupabase();
+  const agentRateMap = {}; // Keyed by normalized agent name
+  agents.forEach(a => {
+    const name = String(a.name || "").trim().toLowerCase();
+    agentRateMap[name] = parseFloat(a.rate_amount) || 13.00;
   });
 
   // 2. Open target spreadsheet for temporary tabs
@@ -361,7 +406,9 @@ function getSheetData() {
     const subKey = `${formattedDate}_${agentName.trim().toLowerCase()}_${casperId.trim().toLowerCase()}`;
     const subData = subMap[subKey] || { total: null, completed: null };
     
-    const dailyEarnings = (delivered + pickedUp) * RATE_PER_TASK;
+    // Use dynamic rate for this agent
+    const agentRate = agentRateMap[agentName.trim().toLowerCase()] || RATE_PER_TASK;
+    const dailyEarnings = (delivered + pickedUp) * agentRate;
     const deliveryConversion = ofd > 0 ? ((delivered / ofd) * 100).toFixed(1) : (delivered > 0 ? "100.0" : "0.0");
     const pickupConversion = ofp > 0 ? ((pickedUp / ofp) * 100).toFixed(1) : (pickedUp > 0 ? "100.0" : "0.0");
     

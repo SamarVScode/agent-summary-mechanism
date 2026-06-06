@@ -787,6 +787,11 @@
                      class="w-full bg-slate-950/60 border border-slate-800 focus:border-indigo-500 focus:ring-1 focus:ring-indigo-500/30 p-3 rounded-xl text-xs text-slate-200 outline-none transition duration-150">
               <p class="text-[9px] text-slate-500 mt-2 italic">Credentials will be automatically fetched from the Agent_view sheet.</p>
             </div>
+            <div>
+              <label class="text-[10px] uppercase font-bold text-slate-400 block tracking-wider mb-2">Rate per Task (₹):</label>
+              <input type="number" x-model="newAgentRate" step="0.5"
+                     class="w-full bg-slate-950/60 border border-slate-800 focus:border-indigo-500 focus:ring-1 focus:ring-indigo-500/30 p-3 rounded-xl text-xs text-slate-200 outline-none transition duration-150">
+            </div>
             <button @click="addAgent()" 
                     :disabled="processing || !newAgentName"
                     class="w-full py-2.5 bg-gradient-to-r from-indigo-600 to-indigo-500 hover:from-indigo-500 hover:to-indigo-400 disabled:from-slate-800 disabled:to-slate-800 text-white disabled:text-slate-500 rounded-xl text-xs font-semibold shadow-lg shadow-indigo-600/20 disabled:shadow-none transition duration-150 flex items-center justify-center space-x-2">
@@ -809,20 +814,27 @@
               <thead>
                 <tr class="text-slate-400 text-[10px] uppercase font-bold tracking-wider border-b border-slate-800 bg-slate-950/40 sticky top-0 z-10">
                   <th class="p-4">Agent Name</th>
+                  <th class="p-4">Rate (₹)</th>
                   <th class="p-4 text-right">Actions</th>
                 </tr>
               </thead>
               <tbody class="divide-y divide-slate-800/60 text-xs text-slate-200">
-                <template x-for="agent in agentsList" :key="agent">
-                  <tr class="hover:bg-slate-800/30 transition" :class="deletingAgentName === agent ? 'opacity-40 pointer-events-none' : ''">
-                    <td class="p-4 font-medium" x-text="agent"></td>
-                    <td class="p-4 text-right">
-                      <button @click="removeAgent(agent)" 
+                <template x-for="agent in agentsList" :key="agent.name">
+                  <tr class="hover:bg-slate-800/30 transition" :class="deletingAgentName === agent.name ? 'opacity-40 pointer-events-none' : ''">
+                    <td class="p-4 font-medium" x-text="agent.name"></td>
+                    <td class="p-4 font-mono text-indigo-400" x-text="'₹' + parseFloat(agent.rate_amount || 13).toFixed(2)"></td>
+                    <td class="p-4 text-right space-x-1">
+                      <button @click="openEditRateModal(agent)"
+                              class="text-indigo-400 hover:text-indigo-300 p-2 transition"
+                              title="Edit Rate">
+                        <i class="fa-solid fa-pen-to-square"></i>
+                      </button>
+                      <button @click="removeAgent(agent.name)" 
                               :disabled="processing || deletingAgentName !== ''"
                               class="text-rose-500 hover:text-rose-400 p-2 transition disabled:opacity-50 disabled:cursor-not-allowed"
                               title="Remove Agent">
-                        <i class="fa-solid fa-trash-can" x-show="deletingAgentName !== agent"></i>
-                        <i class="fa-solid fa-circle-notch fa-spin text-[11px]" x-show="deletingAgentName === agent"></i>
+                        <i class="fa-solid fa-trash-can" x-show="deletingAgentName !== agent.name"></i>
+                        <i class="fa-solid fa-circle-notch fa-spin text-[11px]" x-show="deletingAgentName === agent.name"></i>
                       </button>
                     </td>
                   </tr>
@@ -1041,7 +1053,7 @@
           <td class="p-3 text-right font-semibold" x-text="selectedAgentProfile?.avgPickConv + '%'"></td>
         </tr>
         <tr class="bg-gray-50 font-bold text-slate-900 border-t border-gray-300">
-          <td class="p-3 text-base">Total Earnings (₹13 per task)</td>
+          <td class="p-3 text-base" x-text="'Total Earnings (₹' + (selectedAgentProfile?.rate || 13) + ' per task)'"></td>
           <td class="p-3 text-right text-base" x-text="'₹' + formatNumber(selectedAgentProfile?.earnings || 0)"></td>
         </tr>
         <tr class="text-emerald-700 font-semibold border-b border-gray-200">
@@ -1152,8 +1164,9 @@
         currentView: 'overview',
 
         // Agent Management State
-        agentsList: [],
+        agentsList: [], // Now [{name, rate_amount}, ...]
         newAgentName: '',
+        newAgentRate: 13.00,
         deletingAgentName: '',
         loadingAgents: false,
         
@@ -1164,6 +1177,7 @@
         uniqueWishmasters: [],
         selectedMonth: 'All',
         selectedWishmaster: '',
+        selectedAgentRate: 13.00,
         searchQuery: '',
         
         // Sorting State
@@ -1202,7 +1216,8 @@
 
         init() {
           this.loadUniqueMonths();
-          
+          this.loadAgents(); // Load agent rates early
+
           // Watch for filter/search variables to recalculate and redraw
           this.$watch('selectedMonth', () => { this.currentPage = 1; this.applyFilters(); });
           this.$watch('selectedWishmaster', () => { this.currentPage = 1; this.applyFilters(); });
@@ -1267,9 +1282,10 @@
           
           if (typeof google === 'undefined') {
             setTimeout(() => {
-              this.agentsList.push(this.newAgentName);
+              this.agentsList.push({ name: this.newAgentName, rate_amount: this.newAgentRate });
               this.addToast(`[Mock] Agent '${this.newAgentName}' added successfully.`);
               this.newAgentName = '';
+              this.newAgentRate = 13.00;
               this.processing = false;
             }, 800);
             return;
@@ -1280,6 +1296,7 @@
               if (res.success) {
                 this.addToast(res.message);
                 this.newAgentName = '';
+                this.newAgentRate = 13.00;
                 this.loadAgents();
               }
               this.processing = false;
@@ -1289,7 +1306,44 @@
               this.addToast(`Failed to add agent: ${err.message}`, "error");
               this.processing = false;
             })
-            .addAgentToSupabase(this.newAgentName);
+            .addAgentToSupabase(this.newAgentName, this.newAgentRate);
+        },
+
+        openEditRateModal(agent) {
+          const newRate = prompt(`Enter new rate for ${agent.name}:`, agent.rate_amount || 13.00);
+          if (newRate === null) return;
+          
+          const rateVal = parseFloat(newRate);
+          if (isNaN(rateVal)) {
+            this.addToast("Invalid rate amount.", "error");
+            return;
+          }
+
+          this.processing = true;
+          if (typeof google === 'undefined') {
+            setTimeout(() => {
+              const target = this.agentsList.find(a => a.name === agent.name);
+              if (target) target.rate_amount = rateVal;
+              this.addToast(`[Mock] Rate for '${agent.name}' updated to ₹${rateVal}.`);
+              this.processing = false;
+            }, 800);
+            return;
+          }
+
+          google.script.run
+            .withSuccessHandler(res => {
+              if (res.success) {
+                this.addToast(res.message);
+                this.loadAgents(); // Refresh list
+              }
+              this.processing = false;
+            })
+            .withFailureHandler(err => {
+              console.error(err);
+              this.addToast(`Failed to update rate: ${err.message}`, "error");
+              this.processing = false;
+            })
+            .updateAgentRateInSupabase(agent.name, rateVal);
         },
 
         removeAgent(name) {
@@ -2074,10 +2128,15 @@
           const avgDel = ofd > 0 ? ((del / ofd) * 100).toFixed(1) : "0.0";
           const avgPick = ofp > 0 ? ((pick / ofp) * 100).toFixed(1) : "0.0";
           
+          // Find agent's rate
+          const agentInfo = this.agentsList.find(a => a.name === agentName);
+          const currentRate = agentInfo ? (parseFloat(agentInfo.rate_amount) || 13.00) : 13.00;
+          
           this.selectedAgentProfile = {
             name: agentName,
             id: agentId,
             dc: agentDc,
+            rate: currentRate,
             earnings: earn,
             paid: paid,
             unpaid: unpaid,
@@ -2386,7 +2445,7 @@
                   <div class="kpi-card earnings">
                     <p class="kpi-label">Total Net Earnings</p>
                     <div class="kpi-val">₹${this.formatNumber(this.totals.earnings)}</div>
-                    <div class="kpi-sub">Calculated at flat rate ₹13/task</div>
+                    <div class="kpi-sub">Calculated at agent's rate</div>
                   </div>
                   <div class="kpi-card tasks">
                     <p class="kpi-label">Total Task Volume</p>
@@ -2528,7 +2587,11 @@
                   targetRow.ofp = value;
                 }
                 
-                targetRow.earnings = (targetRow.delivered + targetRow.pickedUp) * 13;
+                // Use agent-specific rate for earnings calculation
+                const agentInfo = this.agentsList.find(a => a.name === targetRow.name);
+                const currentRate = agentInfo ? (parseFloat(agentInfo.rate_amount) || 13.00) : 13.00;
+                targetRow.earnings = (targetRow.delivered + targetRow.pickedUp) * currentRate;
+
                 targetRow.deliveryConversion = targetRow.ofd > 0 ? (targetRow.delivered / targetRow.ofd) * 100 : (targetRow.delivered > 0 ? 100 : 0);
                 targetRow.pickupConversion = targetRow.ofp > 0 ? (targetRow.pickedUp / targetRow.ofp) * 100 : (targetRow.pickedUp > 0 ? 100 : 0);
                 
@@ -2591,36 +2654,6 @@
             const dVal = parseInt(p2, 10);
             if (!isNaN(yVal) && p0.length === 4 && !isNaN(dVal)) {
               const mVal = parseInt(p1, 10);
-              if (!isNaN(mVal) && mVal >= 1 && mVal <= 12) {
-                return new Date(yVal, mVal - 1, dVal);
-              } else {
-                const cleanMonth = p1.substring(0, 3);
-                const capMonth = cleanMonth.charAt(0).toUpperCase() + cleanMonth.slice(1).toLowerCase();
-                const monthIdx = months.indexOf(capMonth);
-                if (monthIdx !== -1) {
-                  return new Date(yVal, monthIdx, dVal);
-                }
-              }
-            }
-          }
-          
-          const parsed = new Date(cleanStr);
-          return isNaN(parsed.getTime()) ? new Date(0) : parsed;
-        },
-
-        addToast(message, type = 'success') {
-          const id = Date.now();
-          this.toasts.push({ id, message, type });
-          setTimeout(() => {
-            this.toasts = this.toasts.filter(t => t.id !== id);
-          }, 3500);
-        },
-      }
-    }
-  </script>
-</body>
-</html>
-
               if (!isNaN(mVal) && mVal >= 1 && mVal <= 12) {
                 return new Date(yVal, mVal - 1, dVal);
               } else {

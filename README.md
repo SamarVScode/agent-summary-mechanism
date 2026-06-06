@@ -62,7 +62,7 @@ The system requires the following tables in Supabase:
 ### Constants
 -   **Primary Spreadsheet ID**: `1avV2Tx9SGaaUeFu2alONmXeXkGYqE4I5r1ZncPYmY7M` (Agent_view)
 -   **Tally Spreadsheet ID**: `1ntacTkjZ6CZV3qHrNaxPYe_lch7ySDTeLuSNS_q_ATQ` (Syncing Tally)
--   **Rate per Task**: ₹13.00
+-   **Rate per Task**: Dynamic (Manageable via Admin Dashboard)
 
 ---
 

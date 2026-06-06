@@ -11,18 +11,21 @@ CREATE TABLE IF NOT EXISTS agents (
   name text NOT NULL UNIQUE,
   casper_id text UNIQUE,
   password text,
+  rate_amount numeric DEFAULT 13.00,
   created_at timestamp with time zone DEFAULT timezone('utc'::text, now()) NOT NULL
 );
 
 -- Ensure columns exist if table was already there
 ALTER TABLE agents ADD COLUMN IF NOT EXISTS casper_id TEXT UNIQUE;
 ALTER TABLE agents ADD COLUMN IF NOT EXISTS password TEXT;
+ALTER TABLE agents ADD COLUMN IF NOT EXISTS rate_amount NUMERIC DEFAULT 13.00;
 
 -- Initialize existing agents with default credentials
 UPDATE agents 
 SET casper_id = LOWER(REPLACE(name, ' ', '.')), 
-    password = LOWER(REPLACE(name, ' ', '.'))
-WHERE casper_id IS NULL;
+    password = LOWER(REPLACE(name, ' ', '.')),
+    rate_amount = 13.00
+WHERE casper_id IS NULL OR rate_amount IS NULL;
 
 -- Enforce constraints
 ALTER TABLE agents ALTER COLUMN casper_id SET NOT NULL;
