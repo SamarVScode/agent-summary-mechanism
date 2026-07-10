@@ -1,0 +1,9 @@
+- [x] Create `leave_requests` table in Supabase and setup Row Level Security (RLS) policies.
+- [x] Integrate Leave Management tab and Request Form (Date picker, reason) in `agent-summary-mechanism/work-tracker`.
+- [x] Integrate Leave History table in `agent-summary-mechanism/work-tracker`.
+- [x] Initialize Vite/React application in `leave-management/admin`.
+- [x] Build Admin Dashboard layout with "Today's Leaves" and "Upcoming Leaves".
+- [x] Implement Admin full calendar view for all leaves.
+- [x] Implement Admin capability to approve or reject pending leaves.
+- [x] Implement Admin capability to assign leaves directly to any agent (auto-approved).
+- [x] Align Admin UI with Agent UI

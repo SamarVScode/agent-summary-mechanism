@@ -1,0 +1,43 @@
+{
+  "pre-tool-guard": {
+    "PreToolUse": [
+      {
+        "matcher": "run_command",
+        "hooks": [
+          {
+            "type": "command",
+            "command": "bash /c/Users/User/Desktop/agent summry update/.agents/hooks/cmd-validator.sh",
+            "timeout": 15
+          }
+        ]
+      },
+      {
+        "matcher": "write_to_file",
+        "hooks": [
+          {
+            "type": "command",
+            "command": "bash /c/Users/User/Desktop/agent summry update/.agents/hooks/file-validator.sh",
+            "timeout": 15
+          }
+        ]
+      },
+      {
+        "matcher": "replace_file_content",
+        "hooks": [
+          {
+            "type": "command",
+            "command": "bash /c/Users/User/Desktop/agent summry update/.agents/hooks/file-validator.sh",
+            "timeout": 15
+          }
+        ]
+      }
+    ],
+    "Stop": [
+      {
+        "type": "command",
+        "command": "bash /c/Users/User/Desktop/agent summry update/.agents/hooks/loop-termination-verifier.sh",
+        "timeout": 30
+      }
+    ]
+  }
+}

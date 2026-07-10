@@ -1,0 +1,13 @@
+{
+  "mcpServers": {
+    "developer-knowledge": {
+      "command": "/c/Python314/python.exe",
+      "args": [
+        "/c/Users/User/Desktop/agent summry update/.agents/developer_knowledge_mcp.py"
+      ],
+      "env": {
+        "WORKSPACE_ROOT": "/c/Users/User/Desktop/agent summry update"
+      }
+    }
+  }
+}
