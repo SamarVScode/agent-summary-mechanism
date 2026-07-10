@@ -1,0 +1,7 @@
+*.md
+*.csv
+.gemini/
+node_modules/
+dist/
+.env
+.fallow/

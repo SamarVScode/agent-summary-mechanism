@@ -1,0 +1,46 @@
+{
+  "pre-tool-guard": {
+    "PreToolUse": [
+      {
+        "matcher": "run_command",
+        "hooks": [
+          {
+            "type": "command",
+            "command": "bash /c/Users/User/Desktop/payout app/work-tracker/.agents/hooks/cmd-validator.sh",
+            "timeout": 15
+          }
+        ]
+      },
+      {
+        "matcher": "write_to_file",
+        "hooks": [
+          {
+            "type": "command",
+            "command": "bash /c/Users/User/Desktop/payout app/work-tracker/.agents/hooks/file-validator.sh",
+            "timeout": 15
+          }
+        ]
+      },
+      {
+        "matcher": "replace_file_content",
+        "hooks": [
+          {
+            "type": "command",
+            "command": "bash /c/Users/User/Desktop/payout app/work-tracker/.agents/hooks/file-validator.sh",
+            "timeout": 15
+          }
+        ]
+      },
+      {
+        "matcher": "any",
+        "hooks": [
+          {
+            "type": "command",
+            "command": "bash /c/Users/User/Desktop/payout app/work-tracker/.agents/hooks/auto-logger.sh",
+            "timeout": 15
+          }
+        ]
+      }
+    ]
+  }
+}
