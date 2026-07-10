@@ -84,7 +84,7 @@
   --shadow-lg: 0 16px 32px -8px rgba(0, 0, 0, 0.5);
 
   --header-bg: rgba(18, 20, 30, 0.6);
-  --nav-bg: rgba(24, 27, 41, 0.6);
+  --nav-bg: rgba(24, 27, 41, 0.99);
   --card-gradient-end: oklch(0.24 0.03 270);
   --card-border: oklch(0.32 0.05 270);
 }
