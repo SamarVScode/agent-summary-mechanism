@@ -1,6 +1,7 @@
 import { useState, useMemo } from "react";
-import { getMonthYearStr } from '../utils/date/getMonthYearStr';
-import { getCurrentMonthYear } from '../utils/date/getCurrentMonthYear';
+import { getMonthYearStr } from '../utils/date/getMonthYearStr.js';
+import { getCurrentMonthYear } from '../utils/date/getCurrentMonthYear.js';
+import { calculateCycleStats } from '../utils/date/cycleUtils.js';
 
 export default function ProfilePage({ agentName, casperId, rateAmount, submissions = [], onLogout, theme, onThemeToggle }) {
   const currentMonthYear = useMemo(() => getCurrentMonthYear(), []);
@@ -18,16 +19,9 @@ export default function ProfilePage({ agentName, casperId, rateAmount, submissio
 
   const [selectedMonth, setSelectedMonth] = useState(currentMonthYear);
 
-  // Calculate earnings for selected month
-  const monthlyStats = useMemo(() => {
-    const filtered = submissions.filter(sub => getMonthYearStr(sub.date) === selectedMonth);
-    const completed = filtered.reduce((sum, sub) => sum + (Number(sub.completed_count) || 0), 0);
-    const total = filtered.reduce((sum, sub) => sum + (Number(sub.total_count) || 0), 0);
-    return {
-      completed,
-      total,
-      earnings: completed * rateAmount
-    };
+  // Calculate bi-monthly cycle earnings for selected month
+  const cycleStats = useMemo(() => {
+    return calculateCycleStats(submissions, selectedMonth, rateAmount);
   }, [submissions, selectedMonth, rateAmount]);
 
   // Calculate all-time stats
@@ -69,7 +63,7 @@ export default function ProfilePage({ agentName, casperId, rateAmount, submissio
         <div className="earnings-card-header">
           <div className="earnings-title-group">
             <h3 className="earnings-card-title">Earnings Summary</h3>
-            <p className="earnings-card-subtitle">Filter payouts by month</p>
+            <p className="earnings-card-subtitle">Filter payouts by month & cycle</p>
           </div>
           <select 
             value={selectedMonth} 
@@ -83,9 +77,60 @@ export default function ProfilePage({ agentName, casperId, rateAmount, submissio
         </div>
 
         <div className="earnings-display">
-          <div className="earnings-main-value">₹{monthlyStats.earnings.toLocaleString()}</div>
+          <div className="earnings-main-value">₹{cycleStats.total.earnings.toLocaleString()}</div>
           <div className="earnings-meta-text">
-            For {selectedMonth} ({monthlyStats.completed} completed tasks)
+            Total for {selectedMonth} ({cycleStats.total.completed} completed tasks)
+          </div>
+        </div>
+
+        {/* Bi-Monthly Cycles Breakdown Cards (Cycle 1 vs Cycle 2) */}
+        <div className="cycle-breakdown-grid" style={{
+          display: 'grid',
+          gridTemplateColumns: 'repeat(2, 1fr)',
+          gap: '12px',
+          marginTop: '16px',
+          marginBottom: '16px'
+        }}>
+          {/* Cycle 1 Card (1st - 15th) */}
+          <div className="cycle-card cycle-1-card" style={{
+            background: 'var(--surface-hover)',
+            border: '1px solid var(--border)',
+            borderRadius: 'var(--radius-md)',
+            padding: '12px 14px'
+          }}>
+            <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '6px' }}>
+              <span style={{ fontSize: 'var(--text-xs)', fontWeight: 700, color: 'var(--primary)', textTransform: 'uppercase', letterSpacing: '0.5px' }}>
+                Cycle 1
+              </span>
+              <span style={{ fontSize: '10px', color: 'var(--ink-muted)' }}>1st – 15th</span>
+            </div>
+            <div style={{ fontSize: 'var(--text-lg)', fontWeight: 800, color: 'var(--ink)' }}>
+              ₹{cycleStats.c1.earnings.toLocaleString()}
+            </div>
+            <div style={{ fontSize: 'var(--text-xs)', color: 'var(--ink-secondary)', marginTop: '4px' }}>
+              {cycleStats.c1.completed} tasks ({cycleStats.c1.count} logs)
+            </div>
+          </div>
+
+          {/* Cycle 2 Card (16th - End) */}
+          <div className="cycle-card cycle-2-card" style={{
+            background: 'var(--surface-hover)',
+            border: '1px solid var(--border)',
+            borderRadius: 'var(--radius-md)',
+            padding: '12px 14px'
+          }}>
+            <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '6px' }}>
+              <span style={{ fontSize: 'var(--text-xs)', fontWeight: 700, color: 'var(--success)', textTransform: 'uppercase', letterSpacing: '0.5px' }}>
+                Cycle 2
+              </span>
+              <span style={{ fontSize: '10px', color: 'var(--ink-muted)' }}>16th – End</span>
+            </div>
+            <div style={{ fontSize: 'var(--text-lg)', fontWeight: 800, color: 'var(--ink)' }}>
+              ₹{cycleStats.c2.earnings.toLocaleString()}
+            </div>
+            <div style={{ fontSize: 'var(--text-xs)', color: 'var(--ink-secondary)', marginTop: '4px' }}>
+              {cycleStats.c2.completed} tasks ({cycleStats.c2.count} logs)
+            </div>
           </div>
         </div>
 

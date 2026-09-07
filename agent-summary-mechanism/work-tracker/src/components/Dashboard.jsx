@@ -1,7 +1,8 @@
 import { useState, useMemo } from 'react';
-import { getMonthYearStr } from '../utils/date/getMonthYearStr';
-import { parseDateStr } from '../utils/date/parseDateStr';
-import { getCurrentMonthYear } from '../utils/date/getCurrentMonthYear';
+import { getMonthYearStr } from '../utils/date/getMonthYearStr.js';
+import { parseDateStr } from '../utils/date/parseDateStr.js';
+import { getCurrentMonthYear } from '../utils/date/getCurrentMonthYear.js';
+import { dateMatchesCycle, getCycleLabel } from '../utils/date/cycleUtils.js';
 
 export default function Dashboard({ rateAmount = 13, submissions = [], loading = false, error = null }) {
   const [selectedSub, setSelectedSub] = useState(null);
@@ -9,6 +10,7 @@ export default function Dashboard({ rateAmount = 13, submissions = [], loading =
   const currentMonthYear = useMemo(() => getCurrentMonthYear(), []);
 
   const [selectedMonth, setSelectedMonth] = useState(currentMonthYear);
+  const [selectedCycle, setSelectedCycle] = useState('all'); // 'all', 'c1', 'c2'
 
   // Group and sum submissions by date (using array.reduce), sorted descending by calendar date
   const groupedSubmissions = useMemo(() => {
@@ -65,10 +67,26 @@ export default function Dashboard({ rateAmount = 13, submissions = [], loading =
     return Array.from(monthsSet);
   }, [submissions, currentMonthYear]);
 
-  // Filter submissions
-  const filteredSubmissions = useMemo(() => {
-    return groupedSubmissions.filter(sub => getMonthYearStr(sub.date) === selectedMonth);
+  // Cycle counts for the currently selected month
+  const cycleCounts = useMemo(() => {
+    const monthSubs = groupedSubmissions.filter(sub => getMonthYearStr(sub.date) === selectedMonth);
+    let c1 = 0;
+    let c2 = 0;
+    monthSubs.forEach(sub => {
+      if (dateMatchesCycle(sub.date, 'c1')) c1++;
+      if (dateMatchesCycle(sub.date, 'c2')) c2++;
+    });
+    return { all: monthSubs.length, c1, c2 };
   }, [groupedSubmissions, selectedMonth]);
+
+  // Filter submissions by month AND cycle
+  const filteredSubmissions = useMemo(() => {
+    return groupedSubmissions.filter(sub => {
+      const matchMonth = getMonthYearStr(sub.date) === selectedMonth;
+      const matchCycle = dateMatchesCycle(sub.date, selectedCycle);
+      return matchMonth && matchCycle;
+    });
+  }, [groupedSubmissions, selectedMonth, selectedCycle]);
 
   // Find and update the active selected sub object when submissions change
   const activeSelectedSub = useMemo(() => {
@@ -189,6 +207,108 @@ export default function Dashboard({ rateAmount = 13, submissions = [], loading =
         </div>
       </div>
 
+      {/* Cycle Filter Tabs */}
+      <div className="cycle-pills-row" style={{
+        display: 'flex',
+        gap: '8px',
+        margin: '12px 0 18px 0',
+        overflowX: 'auto',
+        paddingBottom: '4px'
+      }}>
+        <button
+          type="button"
+          onClick={() => setSelectedCycle('all')}
+          style={{
+            padding: '6px 14px',
+            fontSize: 'var(--text-xs)',
+            fontWeight: 600,
+            borderRadius: 'var(--radius-full)',
+            border: selectedCycle === 'all' ? '1px solid var(--primary)' : '1px solid var(--border)',
+            background: selectedCycle === 'all' ? 'var(--primary)' : 'var(--surface)',
+            color: selectedCycle === 'all' ? '#fff' : 'var(--ink-secondary)',
+            cursor: 'pointer',
+            transition: 'var(--transition-base)',
+            display: 'flex',
+            alignItems: 'center',
+            gap: '6px',
+            whiteSpace: 'nowrap'
+          }}
+        >
+          <span>All Month</span>
+          <span style={{
+            fontSize: '10px',
+            padding: '1px 6px',
+            borderRadius: 'var(--radius-full)',
+            background: selectedCycle === 'all' ? 'rgba(255,255,255,0.25)' : 'var(--surface-hover)',
+            color: selectedCycle === 'all' ? '#fff' : 'var(--ink-muted)'
+          }}>
+            {cycleCounts.all}
+          </span>
+        </button>
+
+        <button
+          type="button"
+          onClick={() => setSelectedCycle('c1')}
+          style={{
+            padding: '6px 14px',
+            fontSize: 'var(--text-xs)',
+            fontWeight: 600,
+            borderRadius: 'var(--radius-full)',
+            border: selectedCycle === 'c1' ? '1px solid var(--primary)' : '1px solid var(--border)',
+            background: selectedCycle === 'c1' ? 'var(--primary)' : 'var(--surface)',
+            color: selectedCycle === 'c1' ? '#fff' : 'var(--ink-secondary)',
+            cursor: 'pointer',
+            transition: 'var(--transition-base)',
+            display: 'flex',
+            alignItems: 'center',
+            gap: '6px',
+            whiteSpace: 'nowrap'
+          }}
+        >
+          <span>Cycle 1 (1–15)</span>
+          <span style={{
+            fontSize: '10px',
+            padding: '1px 6px',
+            borderRadius: 'var(--radius-full)',
+            background: selectedCycle === 'c1' ? 'rgba(255,255,255,0.25)' : 'var(--surface-hover)',
+            color: selectedCycle === 'c1' ? '#fff' : 'var(--ink-muted)'
+          }}>
+            {cycleCounts.c1}
+          </span>
+        </button>
+
+        <button
+          type="button"
+          onClick={() => setSelectedCycle('c2')}
+          style={{
+            padding: '6px 14px',
+            fontSize: 'var(--text-xs)',
+            fontWeight: 600,
+            borderRadius: 'var(--radius-full)',
+            border: selectedCycle === 'c2' ? '1px solid var(--primary)' : '1px solid var(--border)',
+            background: selectedCycle === 'c2' ? 'var(--primary)' : 'var(--surface)',
+            color: selectedCycle === 'c2' ? '#fff' : 'var(--ink-secondary)',
+            cursor: 'pointer',
+            transition: 'var(--transition-base)',
+            display: 'flex',
+            alignItems: 'center',
+            gap: '6px',
+            whiteSpace: 'nowrap'
+          }}
+        >
+          <span>Cycle 2 (16–End)</span>
+          <span style={{
+            fontSize: '10px',
+            padding: '1px 6px',
+            borderRadius: 'var(--radius-full)',
+            background: selectedCycle === 'c2' ? 'rgba(255,255,255,0.25)' : 'var(--surface-hover)',
+            color: selectedCycle === 'c2' ? '#fff' : 'var(--ink-muted)'
+          }}>
+            {cycleCounts.c2}
+          </span>
+        </button>
+      </div>
+
       {/* History timeline list */}
       <div className="history-section">
         {filteredSubmissions.length === 0 ? (
@@ -199,7 +319,7 @@ export default function Dashboard({ rateAmount = 13, submissions = [], loading =
               </svg>
             </div>
             <h3>No entries found</h3>
-            <p>You haven't submitted any work summaries for {selectedMonth} yet.</p>
+            <p>You haven't submitted any work summaries for {selectedMonth} {selectedCycle !== 'all' ? `(${getCycleLabel(selectedCycle)})` : ''} yet.</p>
           </div>
         ) : (
           <div className="submission-list">
