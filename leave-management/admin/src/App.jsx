@@ -23,7 +23,6 @@ export default function App() {
     authError,
     isLoggingIn,
     handleLogin,
-    handleBypassLogin,
     handleLogout,
     fetchData,
     updateLeaveStatus,
@@ -103,7 +102,6 @@ export default function App() {
         authError={authError} 
         isLoggingIn={isLoggingIn} 
         handleLogin={handleLogin}
-        handleBypassLogin={handleBypassLogin}
       />
     );
   }

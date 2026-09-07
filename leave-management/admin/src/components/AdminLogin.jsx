@@ -1,7 +1,7 @@
 import React from 'react';
 import { Calendar as CalendarIcon } from 'lucide-react';
 
-export default function AdminLogin({ email, password, setEmail, setPassword, authError, isLoggingIn, handleLogin, handleBypassLogin }) {
+export default function AdminLogin({ email, password, setEmail, setPassword, authError, isLoggingIn, handleLogin }) {
   return (
     <div className="agent-picker-overlay">
       <div className="agent-picker-card">
@@ -46,23 +46,6 @@ export default function AdminLogin({ email, password, setEmail, setPassword, aut
           >
             {isLoggingIn ? "Signing In..." : "Sign In"}
           </button>
-
-          {handleBypassLogin && (
-            <>
-              <div className="relative my-3 flex items-center justify-center">
-                <div className="border-t border-border w-full"></div>
-                <span className="bg-surface px-3 text-xs text-ink-muted uppercase font-bold absolute">OR</span>
-              </div>
-
-              <button 
-                type="button" 
-                onClick={handleBypassLogin}
-                className="w-full py-2.5 px-4 rounded-full border border-border bg-surface hover:bg-surface-hover text-ink font-bold text-sm transition shadow-sm"
-              >
-                Access Dashboard Directly
-              </button>
-            </>
-          )}
         </form>
       </div>
     </div>

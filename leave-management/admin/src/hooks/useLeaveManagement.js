@@ -7,20 +7,20 @@ export function useLeaveManagement() {
   const [loading, setLoading] = useState(true);
   const [lastUpdated, setLastUpdated] = useState(null);
 
-  // Auth State (accepts Supabase JWT or 'admin_authenticated' session)
-  const [token, setToken] = useState(() => localStorage.getItem('admin_token') || 'admin_authenticated');
+  // Auth State (stores Supabase JWT access token)
+  const [token, setToken] = useState(() => {
+    const saved = localStorage.getItem('admin_token');
+    return (saved && saved !== 'admin_authenticated') ? saved : null;
+  });
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
   const [authError, setAuthError] = useState("");
   const [isLoggingIn, setIsLoggingIn] = useState(false);
 
   const getAuthHeaders = useCallback(() => {
-    // If token is a true JWT (not our bypass indicator), use it; otherwise use SUPABASE_ANON_KEY
-    const useAnon = !token || token === 'admin_authenticated';
-    const authBearer = useAnon ? SUPABASE_ANON_KEY : token;
     return {
       "apikey": SUPABASE_ANON_KEY,
-      "Authorization": `Bearer ${authBearer}`,
+      "Authorization": `Bearer ${token || SUPABASE_ANON_KEY}`,
       "Content-Type": "application/json"
     };
   }, [token]);
@@ -33,17 +33,12 @@ export function useLeaveManagement() {
         headers: getAuthHeaders()
       });
 
-      // If token expired (401), automatically fallback to anon key and clear dead token
+      // If token expired (401), prompt user to re-login
       if (leavesRes.status === 401) {
         localStorage.removeItem('admin_token');
-        setToken('admin_authenticated');
-        leavesRes = await fetch(`${SUPABASE_URL}/rest/v1/leave_requests?select=*&order=start_date.desc`, {
-          headers: {
-            "apikey": SUPABASE_ANON_KEY,
-            "Authorization": `Bearer ${SUPABASE_ANON_KEY}`,
-            "Content-Type": "application/json"
-          }
-        });
+        setToken(null);
+        setAuthError("Session expired. Please sign in again.");
+        return;
       }
 
       const leavesData = await leavesRes.json();
@@ -101,11 +96,6 @@ export function useLeaveManagement() {
     } finally {
       setIsLoggingIn(false);
     }
-  };
-
-  const handleBypassLogin = () => {
-    setToken('admin_authenticated');
-    localStorage.setItem('admin_token', 'admin_authenticated');
   };
 
   const handleLogout = () => {
@@ -186,7 +176,6 @@ export function useLeaveManagement() {
     authError,
     isLoggingIn,
     handleLogin,
-    handleBypassLogin,
     handleLogout,
     fetchData,
     updateLeaveStatus,
