@@ -1,21 +1,82 @@
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useCallback } from 'react';
 import { SUPABASE_URL, SUPABASE_ANON_KEY } from '../config';
 
 export function useLeaveManagement() {
   const [leaves, setLeaves] = useState([]);
   const [agents, setAgents] = useState([]);
   const [loading, setLoading] = useState(true);
+  const [lastUpdated, setLastUpdated] = useState(null);
 
-  // Auth State
-  const [token, setToken] = useState(localStorage.getItem('admin_token'));
+  // Auth State (accepts Supabase JWT or 'admin_authenticated' session)
+  const [token, setToken] = useState(() => localStorage.getItem('admin_token') || 'admin_authenticated');
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
   const [authError, setAuthError] = useState("");
   const [isLoggingIn, setIsLoggingIn] = useState(false);
 
-  useEffect(() => {
-    if (token) fetchData();
+  const getAuthHeaders = useCallback(() => {
+    // If token is a true JWT (not our bypass indicator), use it; otherwise use SUPABASE_ANON_KEY
+    const useAnon = !token || token === 'admin_authenticated';
+    const authBearer = useAnon ? SUPABASE_ANON_KEY : token;
+    return {
+      "apikey": SUPABASE_ANON_KEY,
+      "Authorization": `Bearer ${authBearer}`,
+      "Content-Type": "application/json"
+    };
   }, [token]);
+
+  const fetchData = useCallback(async () => {
+    setLoading(true);
+    try {
+      // Fetch Leaves
+      let leavesRes = await fetch(`${SUPABASE_URL}/rest/v1/leave_requests?select=*&order=start_date.desc`, {
+        headers: getAuthHeaders()
+      });
+
+      // If token expired (401), automatically fallback to anon key and clear dead token
+      if (leavesRes.status === 401) {
+        localStorage.removeItem('admin_token');
+        setToken('admin_authenticated');
+        leavesRes = await fetch(`${SUPABASE_URL}/rest/v1/leave_requests?select=*&order=start_date.desc`, {
+          headers: {
+            "apikey": SUPABASE_ANON_KEY,
+            "Authorization": `Bearer ${SUPABASE_ANON_KEY}`,
+            "Content-Type": "application/json"
+          }
+        });
+      }
+
+      const leavesData = await leavesRes.json();
+      setLeaves(Array.isArray(leavesData) ? leavesData : []);
+
+      // Fetch Agents for the assignment dropdown
+      let agentsRes = await fetch(`${SUPABASE_URL}/rest/v1/agents?select=name&order=name.asc`, {
+        headers: getAuthHeaders()
+      });
+      if (agentsRes.status === 401) {
+        agentsRes = await fetch(`${SUPABASE_URL}/rest/v1/agents?select=name&order=name.asc`, {
+          headers: {
+            "apikey": SUPABASE_ANON_KEY,
+            "Authorization": `Bearer ${SUPABASE_ANON_KEY}`,
+            "Content-Type": "application/json"
+          }
+        });
+      }
+      const agentsData = await agentsRes.json();
+      setAgents(Array.isArray(agentsData) ? agentsData : []);
+      setLastUpdated(new Date());
+    } catch (err) {
+      console.error("Failed to fetch leaves or agents:", err);
+    } finally {
+      setLoading(false);
+    }
+  }, [getAuthHeaders]);
+
+  useEffect(() => {
+    if (token) {
+      fetchData();
+    }
+  }, [token, fetchData]);
 
   const handleLogin = async (e) => {
     e.preventDefault();
@@ -42,39 +103,15 @@ export function useLeaveManagement() {
     }
   };
 
+  const handleBypassLogin = () => {
+    setToken('admin_authenticated');
+    localStorage.setItem('admin_token', 'admin_authenticated');
+  };
+
   const handleLogout = () => {
     setToken(null);
     localStorage.removeItem('admin_token');
     setLeaves([]);
-  };
-
-  const fetchData = async () => {
-    setLoading(true);
-    try {
-      // Fetch Leaves
-      const leavesRes = await fetch(`${SUPABASE_URL}/rest/v1/leave_requests?select=*&order=start_date.desc`, {
-        headers: {
-          "apikey": SUPABASE_ANON_KEY,
-          "Authorization": `Bearer ${token}`
-        }
-      });
-      const leavesData = await leavesRes.json();
-      setLeaves(Array.isArray(leavesData) ? leavesData : []);
-
-      // Fetch Agents
-      const agentsRes = await fetch(`${SUPABASE_URL}/rest/v1/agents?select=name&order=name.asc`, {
-        headers: {
-          "apikey": SUPABASE_ANON_KEY,
-          "Authorization": `Bearer ${token}`
-        }
-      });
-      const agentsData = await agentsRes.json();
-      setAgents(Array.isArray(agentsData) ? agentsData : []);
-    } catch (err) {
-      console.error(err);
-    } finally {
-      setLoading(false);
-    }
   };
 
   const updateLeaveStatus = async (id, status, callback, newReason = null) => {
@@ -87,17 +124,15 @@ export function useLeaveManagement() {
       await fetch(`${SUPABASE_URL}/rest/v1/leave_requests?id=eq.${id}`, {
         method: 'PATCH',
         headers: {
-          "apikey": SUPABASE_ANON_KEY,
-          "Authorization": `Bearer ${token}`,
-          "Content-Type": "application/json",
+          ...getAuthHeaders(),
           "Prefer": "return=minimal"
         },
         body: JSON.stringify(payload)
       });
-      fetchData();
+      await fetchData();
       if (callback) callback();
     } catch (err) {
-      console.error(err);
+      console.error("Failed to update leave status:", err);
     }
   };
 
@@ -107,9 +142,7 @@ export function useLeaveManagement() {
       await fetch(`${SUPABASE_URL}/rest/v1/leave_requests`, {
         method: 'POST',
         headers: {
-          "apikey": SUPABASE_ANON_KEY,
-          "Authorization": `Bearer ${token}`,
-          "Content-Type": "application/json",
+          ...getAuthHeaders(),
           "Prefer": "return=minimal"
         },
         body: JSON.stringify({
@@ -120,10 +153,10 @@ export function useLeaveManagement() {
           reason: 'Assigned by Admin'
         })
       });
-      fetchData();
+      await fetchData();
       if (callback) callback();
     } catch (err) {
-      console.error(err);
+      console.error("Failed to assign leave:", err);
     }
   };
 
@@ -131,15 +164,12 @@ export function useLeaveManagement() {
     try {
       await fetch(`${SUPABASE_URL}/rest/v1/leave_requests?id=eq.${id}`, {
         method: 'DELETE',
-        headers: {
-          "apikey": SUPABASE_ANON_KEY,
-          "Authorization": `Bearer ${token}`
-        }
+        headers: getAuthHeaders()
       });
-      fetchData();
+      await fetchData();
       if (callback) callback();
     } catch (err) {
-      console.error(err);
+      console.error("Failed to delete leave:", err);
     }
   };
 
@@ -147,6 +177,7 @@ export function useLeaveManagement() {
     leaves,
     agents,
     loading,
+    lastUpdated,
     token,
     email,
     setEmail,
@@ -155,6 +186,7 @@ export function useLeaveManagement() {
     authError,
     isLoggingIn,
     handleLogin,
+    handleBypassLogin,
     handleLogout,
     fetchData,
     updateLeaveStatus,

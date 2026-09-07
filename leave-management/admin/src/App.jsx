@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from 'react';
-import { format, addDays, isSameDay, parseISO, startOfMonth, endOfMonth, eachDayOfInterval, startOfWeek, endOfWeek, isToday, isFuture, isPast } from 'date-fns';
-import { Calendar as CalendarIcon, CheckCircle, XCircle, UserPlus, Clock } from 'lucide-react';
+import { format, isSameDay, parseISO, startOfMonth, endOfMonth, eachDayOfInterval, startOfWeek, endOfWeek, addMonths, subMonths } from 'date-fns';
+import { Calendar as CalendarIcon, CheckCircle, UserPlus, Clock, ChevronLeft, ChevronRight, RotateCw } from 'lucide-react';
 import { useLeaveManagement } from './hooks/useLeaveManagement';
 import AdminLogin from './components/AdminLogin';
 import LeaveHistoryTable from './components/LeaveHistoryTable';
@@ -14,6 +14,7 @@ export default function App() {
     leaves,
     agents,
     loading,
+    lastUpdated,
     token,
     email,
     setEmail,
@@ -22,12 +23,32 @@ export default function App() {
     authError,
     isLoggingIn,
     handleLogin,
+    handleBypassLogin,
     handleLogout,
     fetchData,
     updateLeaveStatus,
     assignLeave,
     deleteLeave
   } = useLeaveManagement();
+
+  // Auto-refresh every 30s and on window focus
+  useEffect(() => {
+    if (!token) return;
+
+    const interval = setInterval(() => {
+      fetchData();
+    }, 30000);
+
+    const handleFocus = () => {
+      fetchData();
+    };
+
+    window.addEventListener('focus', handleFocus);
+    return () => {
+      clearInterval(interval);
+      window.removeEventListener('focus', handleFocus);
+    };
+  }, [token, fetchData]);
 
   // Assign Leave Form State
   const [assignName, setAssignName] = useState("");
@@ -37,6 +58,7 @@ export default function App() {
   const [activeTab, setActiveTab] = useState('dashboard');
   const [selectedLeave, setSelectedLeave] = useState(null);
   const [leaveToDelete, setLeaveToDelete] = useState(null);
+  const [calendarMonth, setCalendarMonth] = useState(new Date());
 
   const handleAssignLeave = async (e) => {
     e.preventDefault();
@@ -58,11 +80,17 @@ export default function App() {
   };
 
   const todayDate = new Date();
+  const todayStr = format(todayDate, 'yyyy-MM-dd');
   
-  // Derived state
-  const todayLeaves = leaves.filter(l => l.status === 'approved' && isSameDay(parseISO(l.start_date), todayDate) || (parseISO(l.start_date) <= todayDate && parseISO(l.end_date) >= todayDate));
+  // Derived state: strictly check approved status and date boundaries
+  const todayLeaves = leaves.filter(l => 
+    l.status === 'approved' && l.start_date <= todayStr && l.end_date >= todayStr
+  );
   
-  const upcomingLeaves = leaves.filter(l => l.status === 'approved' && parseISO(l.start_date) > todayDate);
+  const upcomingLeaves = leaves.filter(l => 
+    l.status === 'approved' && l.start_date > todayStr
+  );
+  
   const pendingLeaves = leaves.filter(l => l.status === 'pending');
 
   if (!token) {
@@ -74,26 +102,54 @@ export default function App() {
         setPassword={setPassword} 
         authError={authError} 
         isLoggingIn={isLoggingIn} 
-        handleLogin={handleLogin} 
+        handleLogin={handleLogin}
+        handleBypassLogin={handleBypassLogin}
       />
     );
   }
 
   return (
     <div className="app-shell">
-      <header className="app-header">
+      <header className="app-header relative">
+        {loading && (
+          <div className="absolute bottom-0 left-0 right-0 h-0.5 bg-primary/20 overflow-hidden">
+            <div className="h-full bg-primary animate-pulse w-full"></div>
+          </div>
+        )}
         <div className="header-content">
           <div className="header-brand">
             <div className="header-logo">
               <CalendarIcon className="w-6 h-6 text-primary" />
             </div>
-            <h1 className="header-title">AgentFlow Admin</h1>
+            <div>
+              <h1 className="header-title">AgentFlow Admin</h1>
+              <p className="text-[11px] text-ink-muted hidden sm:block">Leave Management & Team Scheduling</p>
+            </div>
           </div>
-          <div className="flex items-center gap-4">
-            <button onClick={fetchData} className="px-4 py-2 rounded-full bg-primary-light text-primary hover:bg-primary/10 transition text-sm font-bold">
-              Refresh
+          <div className="flex items-center gap-3">
+            {lastUpdated && (
+              <div className="hidden md:flex flex-col text-right">
+                <span className="text-[10px] uppercase font-bold text-ink-muted tracking-wider">Last Sync</span>
+                <span className="text-xs font-semibold text-ink-secondary">
+                  {format(lastUpdated, 'hh:mm:ss a')}
+                </span>
+              </div>
+            )}
+            <button 
+              type="button"
+              onClick={fetchData} 
+              disabled={loading}
+              className="px-4 py-2 rounded-full bg-primary-light text-primary hover:bg-primary/15 transition text-sm font-bold flex items-center gap-2 disabled:opacity-60 shadow-sm"
+              title="Refresh data from database"
+            >
+              <RotateCw className={`w-4 h-4 ${loading ? 'animate-spin' : ''}`} />
+              <span>{loading ? 'Refreshing...' : 'Refresh'}</span>
             </button>
-            <button onClick={handleLogout} className="px-4 py-2 rounded-full border border-border bg-surface hover:bg-surface-hover transition text-ink-secondary hover:text-ink text-sm font-bold shadow-sm">
+            <button 
+              type="button"
+              onClick={handleLogout} 
+              className="px-4 py-2 rounded-full border border-border bg-surface hover:bg-surface-hover transition text-ink-secondary hover:text-ink text-sm font-bold shadow-sm"
+            >
               Sign Out
             </button>
           </div>
@@ -190,24 +246,62 @@ export default function App() {
         </div>
 
         {/* Pending Approvals */}
-        <PendingRequestsTable pendingLeaves={pendingLeaves} setSelectedLeave={setSelectedLeave} />
+        <PendingRequestsTable 
+          pendingLeaves={pendingLeaves} 
+          setSelectedLeave={setSelectedLeave} 
+          updateLeaveStatus={handleUpdateLeaveStatus} 
+          onRefresh={fetchData}
+          loading={loading}
+        />
 
         {/* Full Calendar View */}
         <div className="card mt-8">
-          <h2 className="card-title mb-4">Full Calendar View</h2>
+          <div className="flex items-center justify-between mb-4">
+            <div>
+              <h2 className="card-title">Full Calendar View</h2>
+              <p className="text-xs text-ink-muted mt-0.5 font-medium">{format(calendarMonth, 'MMMM yyyy')}</p>
+            </div>
+            <div className="flex items-center gap-2">
+              <button 
+                type="button"
+                onClick={() => setCalendarMonth(prev => subMonths(prev, 1))}
+                className="p-1.5 rounded-lg border border-border hover:bg-surface-hover text-ink-secondary transition"
+                title="Previous Month"
+              >
+                <ChevronLeft className="w-4 h-4" />
+              </button>
+              <button 
+                type="button"
+                onClick={() => setCalendarMonth(new Date())}
+                className="px-2.5 py-1 text-xs font-semibold rounded-lg border border-border hover:bg-surface-hover text-ink-secondary transition"
+              >
+                Today
+              </button>
+              <button 
+                type="button"
+                onClick={() => setCalendarMonth(prev => addMonths(prev, 1))}
+                className="p-1.5 rounded-lg border border-border hover:bg-surface-hover text-ink-secondary transition"
+                title="Next Month"
+              >
+                <ChevronRight className="w-4 h-4" />
+              </button>
+            </div>
+          </div>
           <div className="grid grid-cols-7 gap-px bg-border rounded-lg overflow-hidden border border-border">
             {['Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat'].map(d => (
               <div key={d} className="p-2 text-center text-xs font-bold uppercase text-ink-muted bg-surface">{d}</div>
             ))}
-            {eachDayOfInterval({ start: startOfWeek(startOfMonth(todayDate)), end: endOfWeek(endOfMonth(todayDate)) }).map((date, idx) => {
+            {eachDayOfInterval({ start: startOfWeek(startOfMonth(calendarMonth)), end: endOfWeek(endOfMonth(calendarMonth)) }).map((date, idx) => {
               const dateStr = format(date, 'yyyy-MM-dd');
-              const dayLeaves = leaves.filter(l => l.status === 'approved' && parseISO(l.start_date) <= date && parseISO(l.end_date) >= date);
+              const dayLeaves = leaves.filter(l => l.status === 'approved' && l.start_date <= dateStr && l.end_date >= dateStr);
+              const isToday = isSameDay(date, todayDate);
+              const isCurrentMonth = date.getMonth() === calendarMonth.getMonth();
               return (
-                <div key={idx} className={`min-h-[100px] p-2 ${isSameDay(date, todayDate) ? 'bg-primary-light' : 'bg-bg'}`}>
-                  <span className={`text-sm font-bold ${isSameDay(date, todayDate) ? 'text-primary' : 'text-ink-secondary'}`}>{format(date, 'd')}</span>
+                <div key={idx} className={`min-h-[100px] p-2 ${isToday ? 'bg-primary-light/40' : isCurrentMonth ? 'bg-surface' : 'bg-bg opacity-50'}`}>
+                  <span className={`text-sm font-bold ${isToday ? 'text-primary' : isCurrentMonth ? 'text-ink' : 'text-ink-muted'}`}>{format(date, 'd')}</span>
                   <div className="mt-1 space-y-1">
                     {dayLeaves.map(l => (
-                      <div key={l.id} className="text-[10px] px-1.5 py-0.5 bg-success-light text-success font-bold rounded truncate">
+                      <div key={l.id} className="text-[10px] px-1.5 py-0.5 bg-success-light text-success font-bold rounded truncate" title={`${l.agent_name} (${l.reason || 'Leave'})`}>
                         {l.agent_name}
                       </div>
                     ))}
@@ -219,7 +313,13 @@ export default function App() {
         </div>
           </>
         ) : (
-          <LeaveHistoryTable leaves={leaves} setLeaveToDelete={setLeaveToDelete} />
+          <LeaveHistoryTable 
+            leaves={leaves} 
+            setLeaveToDelete={setLeaveToDelete} 
+            setSelectedLeave={setSelectedLeave} 
+            onRefresh={fetchData}
+            loading={loading}
+          />
         )}
 
       {selectedLeave && (
