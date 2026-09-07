@@ -55,12 +55,23 @@ export function dateMatchesCycle(dateStr, cycle = 'all') {
 }
 
 /**
+ * Returns the current active cycle based on today's calendar date:
+ * 'c1' if day <= 15, 'c2' if day >= 16.
+ *
+ * @returns {'c1'|'c2'}
+ */
+export function getCurrentCycle() {
+  const today = new Date();
+  return today.getDate() <= 15 ? 'c1' : 'c2';
+}
+
+/**
  * Human-readable label for payout cycle.
  */
 export function getCycleLabel(cycle) {
   if (cycle === 'c1') return 'Cycle 1 (1st – 15th)';
   if (cycle === 'c2') return 'Cycle 2 (16th – End)';
-  return 'Entire Month (Full)';
+  return 'Complete Month (Full)';
 }
 
 /**
