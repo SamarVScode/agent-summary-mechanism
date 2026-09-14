@@ -147,7 +147,6 @@ fun DashboardScreen(viewModel: DashboardViewModel) {
                             }
                         }
                     }
-                }
             }
 
             Spacer(modifier = Modifier.height(14.dp))
