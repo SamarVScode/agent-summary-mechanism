@@ -337,79 +337,32 @@ fun ProfileScreen(
                     modifier = Modifier.fillMaxWidth(),
                     horizontalAlignment = Alignment.CenterHorizontally
                 ) {
-                    Text(
-                        text = "₹$displayedEarnings",
-                        fontSize = 32.sp,
-                        fontWeight = FontWeight.Bold,
-                        color = PinkPrimary
-                    )
-                    Text(
-                        text = "$displayedCompleted tasks completed",
-                        fontSize = 13.sp,
-                        color = MaterialTheme.colorScheme.onSurfaceVariant,
-                        modifier = Modifier.padding(top = 4.dp)
-                    )
-                }
-            }
-        }
-
-        Spacer(modifier = Modifier.height(16.dp))
-
-        // Theme Selection Card (Light | Dark | System)
-        Card(
-            modifier = Modifier.fillMaxWidth(),
-            shape = RoundedCornerShape(16.dp),
-            colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surface),
-            elevation = CardDefaults.cardElevation(defaultElevation = 2.dp)
-        ) {
-            Column(
-                modifier = Modifier
-                    .fillMaxWidth()
-                    .padding(18.dp)
-            ) {
-                Text(
-                    text = "Theme Mode",
-                    fontWeight = FontWeight.Bold,
-                    fontSize = 15.sp,
-                    color = MaterialTheme.colorScheme.onSurface
-                )
-                Text(
-                    text = "Choose light, dark, or device system settings",
-                    fontSize = 12.sp,
-                    color = MaterialTheme.colorScheme.onSurfaceVariant,
-                    modifier = Modifier.padding(top = 2.dp, bottom = 12.dp)
-                )
-
-                // 3-Option Segmented Control: Light | Dark | System
-                Row(
-                    modifier = Modifier
-                        .fillMaxWidth()
-                        .clip(RoundedCornerShape(12.dp))
-                        .background(MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.5f))
-                        .padding(4.dp),
-                    horizontalArrangement = Arrangement.spacedBy(4.dp)
-                ) {
-                    ThemeSegmentOption(
-                        label = "Light",
-                        icon = Icons.Default.LightMode,
-                        isSelected = uiState.currentTheme == "light",
-                        onClick = { viewModel.setTheme("light") },
-                        modifier = Modifier.weight(1f)
-                    )
-                    ThemeSegmentOption(
-                        label = "Dark",
-                        icon = Icons.Default.DarkMode,
-                        isSelected = uiState.currentTheme == "dark",
-                        onClick = { viewModel.setTheme("dark") },
-                        modifier = Modifier.weight(1f)
-                    )
-                    ThemeSegmentOption(
-                        label = "System",
-                        icon = Icons.Default.SettingsBrightness,
-                        isSelected = uiState.currentTheme == "system",
-                        onClick = { viewModel.setTheme("system") },
-                        modifier = Modifier.weight(1f)
-                    )
+                    if (uiState.isLoading) {
+                        androidx.compose.material3.CircularProgressIndicator(
+                            color = PinkPrimary,
+                            modifier = Modifier.size(32.dp),
+                            strokeWidth = 3.dp
+                        )
+                        Spacer(modifier = Modifier.height(8.dp))
+                        Text(
+                            text = "Calculating payout stats...",
+                            fontSize = 12.sp,
+                            color = MaterialTheme.colorScheme.onSurfaceVariant
+                        )
+                    } else {
+                        Text(
+                            text = "₹$displayedEarnings",
+                            fontSize = 32.sp,
+                            fontWeight = FontWeight.Bold,
+                            color = PinkPrimary
+                        )
+                        Text(
+                            text = "$displayedCompleted tasks completed",
+                            fontSize = 13.sp,
+                            color = MaterialTheme.colorScheme.onSurfaceVariant,
+                            modifier = Modifier.padding(top = 4.dp)
+                        )
+                    }
                 }
             }
         }
@@ -445,44 +398,4 @@ fun ProfileScreen(
         onLogout = { viewModel.logout(onLogout) },
         onDismiss = { showSettingsSheet = false }
     )
-}
-
-@Composable
-private fun ThemeSegmentOption(
-    label: String,
-    icon: ImageVector,
-    isSelected: Boolean,
-    onClick: () -> Unit,
-    modifier: Modifier = Modifier
-) {
-    Box(
-        modifier = modifier
-            .clip(RoundedCornerShape(10.dp))
-            .then(
-                if (isSelected) Modifier.background(AgentFlowGradient)
-                else Modifier.background(Color.Transparent)
-            )
-            .clickable { onClick() }
-            .padding(vertical = 10.dp),
-        contentAlignment = Alignment.Center
-    ) {
-        Row(
-            verticalAlignment = Alignment.CenterVertically,
-            horizontalArrangement = Arrangement.Center
-        ) {
-            Icon(
-                imageVector = icon,
-                contentDescription = label,
-                tint = if (isSelected) Color.White else MaterialTheme.colorScheme.onSurfaceVariant,
-                modifier = Modifier.size(16.dp)
-            )
-            Spacer(modifier = Modifier.width(6.dp))
-            Text(
-                text = label,
-                fontSize = 13.sp,
-                fontWeight = if (isSelected) FontWeight.Bold else FontWeight.Medium,
-                color = if (isSelected) Color.White else MaterialTheme.colorScheme.onSurfaceVariant
-            )
-        }
-    }
 }

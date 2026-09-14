@@ -89,27 +89,19 @@ fun AgentFlowNavGraph(
     }
     val leaveUiState by leaveViewModel.uiState.collectAsState()
 
-    if (!isLoggedIn) {
-        val loginViewModel = remember {
-            LoginViewModel(supabaseService, userPreferences)
-        }
-        LoginScreen(
-            viewModel = loginViewModel,
-            onLoginSuccess = {
-                navController.navigate(Screen.Tracker.route) {
-                    popUpTo(Screen.Login.route) { inclusive = true }
-                }
-            }
-        )
-    } else {
-        Scaffold(
-            topBar = {
+    val isAuthRoute = currentRoute == Screen.Login.route
+
+    Scaffold(
+        topBar = {
+            if (!isAuthRoute && isLoggedIn) {
                 AgentFlowTopBar(
                     agentName = agentName,
                     currentDate = DateUtils.formatDate()
                 )
-            },
-            bottomBar = {
+            }
+        },
+        bottomBar = {
+            if (!isAuthRoute && isLoggedIn) {
                 AgentFlowBottomBar(
                     currentRoute = currentRoute,
                     hasUnreadLeaves = leaveUiState.hasUnreadLeaves,
@@ -124,68 +116,82 @@ fun AgentFlowNavGraph(
                     }
                 )
             }
-        ) { innerPadding ->
-            Box(
-                modifier = Modifier
-                    .fillMaxSize()
-                    .padding(innerPadding)
+        }
+    ) { innerPadding ->
+        Box(
+            modifier = Modifier
+                .fillMaxSize()
+                .padding(if (isAuthRoute) androidx.compose.foundation.layout.PaddingValues(0.dp) else innerPadding)
+        ) {
+            NavHost(
+                navController = navController,
+                startDestination = startDestination
             ) {
-                NavHost(
-                    navController = navController,
-                    startDestination = Screen.Tracker.route
-                ) {
-                    composable(Screen.Dashboard.route) {
-                        val dashboardViewModel = remember(agentName, rateAmount) {
-                            DashboardViewModel(supabaseService, agentName, rateAmount)
-                        }
-                        DashboardScreen(viewModel = dashboardViewModel)
+                composable(Screen.Login.route) {
+                    val loginViewModel = remember {
+                        LoginViewModel(supabaseService, userPreferences)
                     }
-
-                    composable(Screen.Tracker.route) {
-                        val ocrExtractor = remember { MlKitOcrExtractor(context) }
-                        val trackerViewModel = remember(agentName, casperId, rateAmount) {
-                            TrackerViewModel(
-                                supabaseService = supabaseService,
-                                ocrExtractor = ocrExtractor,
-                                context = context,
-                                agentName = agentName,
-                                casperId = casperId,
-                                rateAmount = rateAmount
-                            )
+                    LoginScreen(
+                        viewModel = loginViewModel,
+                        onLoginSuccess = {
+                            navController.navigate(Screen.Tracker.route) {
+                                popUpTo(Screen.Login.route) { inclusive = true }
+                            }
                         }
-                        TrackerScreen(
-                            viewModel = trackerViewModel,
-                            agentName = agentName
+                    )
+                }
+
+                composable(Screen.Dashboard.route) {
+                    val dashboardViewModel = remember(agentName, rateAmount) {
+                        DashboardViewModel(supabaseService, agentName, rateAmount)
+                    }
+                    DashboardScreen(viewModel = dashboardViewModel)
+                }
+
+                composable(Screen.Tracker.route) {
+                    val ocrExtractor = remember { MlKitOcrExtractor(context) }
+                    val trackerViewModel = remember(agentName, casperId, rateAmount) {
+                        TrackerViewModel(
+                            supabaseService = supabaseService,
+                            ocrExtractor = ocrExtractor,
+                            context = context,
+                            agentName = agentName,
+                            casperId = casperId,
+                            rateAmount = rateAmount
                         )
                     }
+                    TrackerScreen(
+                        viewModel = trackerViewModel,
+                        agentName = agentName
+                    )
+                }
 
-                    composable(Screen.Leave.route) {
-                        LeaveScreen(viewModel = leaveViewModel)
+                composable(Screen.Leave.route) {
+                    LeaveScreen(viewModel = leaveViewModel)
+                }
+
+                composable(Screen.Profile.route) {
+                    val profileViewModel = remember(agentName, casperId, rateAmount) {
+                        ProfileViewModel(
+                            supabaseService = supabaseService,
+                            userPreferences = userPreferences,
+                            agentName = agentName,
+                            casperId = casperId,
+                            rateAmount = rateAmount
+                        )
                     }
-
-                    composable(Screen.Profile.route) {
-                        val profileViewModel = remember(agentName, casperId, rateAmount) {
-                            ProfileViewModel(
-                                supabaseService = supabaseService,
-                                userPreferences = userPreferences,
-                                agentName = agentName,
-                                casperId = casperId,
-                                rateAmount = rateAmount
-                            )
-                        }
-                        ProfileScreen(
-                            viewModel = profileViewModel,
-                            appUpdateManager = appUpdateManager,
-                            onLogout = {
-                                scope.launch {
-                                    userPreferences.clearAgentInfo()
-                                    navController.navigate(Screen.Login.route) {
-                                        popUpTo(0) { inclusive = true }
-                                    }
+                    ProfileScreen(
+                        viewModel = profileViewModel,
+                        appUpdateManager = appUpdateManager,
+                        onLogout = {
+                            scope.launch {
+                                userPreferences.clearAgentInfo()
+                                navController.navigate(Screen.Login.route) {
+                                    popUpTo(0) { inclusive = true }
                                 }
                             }
-                        )
-                    }
+                        }
+                    )
                 }
             }
         }

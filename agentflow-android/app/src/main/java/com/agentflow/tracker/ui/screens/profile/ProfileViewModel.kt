@@ -13,6 +13,7 @@ import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.launch
 
 data class ProfileUiState(
+    val isLoading: Boolean = true,
     val selectedMonth: String = DateUtils.getCurrentMonthYear(),
     val selectedCycle: String = DateUtils.getCurrentCycle(), // "c1", "c2", "all"
     val availableMonths: List<String> = listOf(DateUtils.getCurrentMonthYear()),
@@ -50,11 +51,13 @@ class ProfileViewModel(
 
     fun loadData() {
         viewModelScope.launch {
+            _uiState.value = _uiState.value.copy(isLoading = true)
             val res = supabaseService.fetchSubmissions(agentName)
             res.onSuccess { subs ->
                 submissions = subs
                 recalculate()
             }
+            _uiState.value = _uiState.value.copy(isLoading = false)
         }
     }
 

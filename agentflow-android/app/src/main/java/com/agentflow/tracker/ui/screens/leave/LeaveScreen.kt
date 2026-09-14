@@ -53,6 +53,31 @@ import com.agentflow.tracker.ui.theme.GradientPink
 fun LeaveScreen(viewModel: LeaveViewModel) {
     val uiState by viewModel.uiState.collectAsState()
 
+    if (uiState.isLoading && !uiState.isRefreshing) {
+        Box(
+            modifier = Modifier
+                .fillMaxSize()
+                .background(MaterialTheme.colorScheme.background),
+            contentAlignment = Alignment.Center
+        ) {
+            Column(horizontalAlignment = Alignment.CenterHorizontally) {
+                CircularProgressIndicator(
+                    color = PinkPrimary,
+                    modifier = Modifier.size(36.dp),
+                    strokeWidth = 3.dp
+                )
+                Spacer(modifier = Modifier.height(14.dp))
+                Text(
+                    text = "Loading leave records & calendar...",
+                    fontWeight = FontWeight.SemiBold,
+                    fontSize = 14.sp,
+                    color = MaterialTheme.colorScheme.onSurfaceVariant
+                )
+            }
+        }
+        return
+    }
+
     PullToRefreshBox(
         isRefreshing = uiState.isRefreshing,
         onRefresh = { viewModel.refreshLeaves() },

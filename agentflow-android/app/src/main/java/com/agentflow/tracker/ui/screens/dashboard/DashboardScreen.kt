@@ -189,7 +189,20 @@ fun DashboardScreen(viewModel: DashboardViewModel) {
                         .weight(1f),
                     contentAlignment = Alignment.Center
                 ) {
-                    CircularProgressIndicator(color = PinkPrimary)
+                    Column(horizontalAlignment = Alignment.CenterHorizontally) {
+                        CircularProgressIndicator(
+                            color = PinkPrimary,
+                            modifier = Modifier.size(36.dp),
+                            strokeWidth = 3.dp
+                        )
+                        Spacer(modifier = Modifier.height(14.dp))
+                        Text(
+                            text = "Loading work logs...",
+                            fontWeight = FontWeight.SemiBold,
+                            fontSize = 14.sp,
+                            color = MaterialTheme.colorScheme.onSurfaceVariant
+                        )
+                    }
                 }
             } else if (uiState.filteredSubmissions.isEmpty()) {
                 Box(

@@ -12,10 +12,10 @@ import androidx.compose.ui.platform.LocalView
 import androidx.core.view.WindowCompat
 
 private val DarkColorScheme = darkColorScheme(
-    primary = PinkPrimary,
+    primary = BluePrimary,
     onPrimary = SurfaceLight,
-    primaryContainer = PinkLightDark,
-    onPrimaryContainer = PinkPrimary,
+    primaryContainer = BlueLightDark,
+    onPrimaryContainer = BluePrimary,
     background = BackgroundDark,
     onBackground = InkDark,
     surface = SurfaceDark,
@@ -28,10 +28,10 @@ private val DarkColorScheme = darkColorScheme(
 )
 
 private val LightColorScheme = lightColorScheme(
-    primary = PinkPrimary,
+    primary = BluePrimary,
     onPrimary = SurfaceLight,
-    primaryContainer = PinkLight,
-    onPrimaryContainer = PinkPrimary,
+    primaryContainer = BlueLight,
+    onPrimaryContainer = BluePrimary,
     background = BackgroundLight,
     onBackground = InkLight,
     surface = SurfaceLight,

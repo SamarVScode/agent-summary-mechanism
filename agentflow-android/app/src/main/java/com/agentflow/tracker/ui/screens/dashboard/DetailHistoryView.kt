@@ -57,7 +57,9 @@ fun DetailHistoryView(
     onImageClick: (String) -> Unit,
     onDelete: () -> Unit
 ) {
+    androidx.activity.compose.BackHandler(onBack = onBack)
     var showDeleteDialog by remember { mutableStateOf(false) }
+    var isDeleting by remember { mutableStateOf(false) }
 
     Column(
         modifier = Modifier
@@ -119,16 +121,28 @@ fun DetailHistoryView(
                 confirmButton = {
                     Button(
                         onClick = {
-                            showDeleteDialog = false
+                            isDeleting = true
                             onDelete()
                         },
+                        enabled = !isDeleting,
                         colors = ButtonDefaults.buttonColors(containerColor = ErrorRed)
                     ) {
-                        Text("Delete", color = Color.White, fontWeight = FontWeight.Bold)
+                        if (isDeleting) {
+                            androidx.compose.material3.CircularProgressIndicator(
+                                color = Color.White,
+                                strokeWidth = 2.dp,
+                                modifier = Modifier.size(18.dp)
+                            )
+                        } else {
+                            Text("Delete", color = Color.White, fontWeight = FontWeight.Bold)
+                        }
                     }
                 },
                 dismissButton = {
-                    TextButton(onClick = { showDeleteDialog = false }) {
+                    TextButton(
+                        onClick = { showDeleteDialog = false },
+                        enabled = !isDeleting
+                    ) {
                         Text("Cancel", color = MaterialTheme.colorScheme.onSurfaceVariant)
                     }
                 }

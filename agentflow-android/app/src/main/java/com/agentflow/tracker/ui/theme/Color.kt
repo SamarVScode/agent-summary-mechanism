@@ -3,24 +3,29 @@ package com.agentflow.tracker.ui.theme
 import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
 
-// ── 3-Color Linear Brand Gradient (Orange -> Pink -> Purple) ───────────
-val GradientOrange = Color(0xFFFF6A00)
-val GradientPink = Color(0xFFFF1493)
-val GradientPurple = Color(0xFF7928CA)
+// ── Simple Flat Blue Brand Palette ─────────────────────────────────────
+val BluePrimary = Color(0xFF2563EB) // Clean Modern Flat Blue
+val BlueHover = Color(0xFF1D4ED8)
+val BlueLight = Color(0x1A2563EB)
+val BlueLightDark = Color(0x252563EB)
 
+// Flat Blue Linear Brand Gradients
 val AgentFlowGradient = Brush.horizontalGradient(
-    colors = listOf(GradientOrange, GradientPink, GradientPurple)
+    colors = listOf(Color(0xFF2563EB), Color(0xFF3B82F6))
 )
 
 val AgentFlowGradientVertical = Brush.verticalGradient(
-    colors = listOf(GradientOrange, GradientPink, GradientPurple)
+    colors = listOf(Color(0xFF2563EB), Color(0xFF3B82F6))
 )
 
-// Legacy / Direct Accents
-val PinkPrimary = Color(0xFFFF1493)
-val PinkHover = Color(0xFFE11D48)
-val PinkLight = Color(0x1FFF1493)
-val PinkLightDark = Color(0x25FF1493)
+// Primary & Accent Aliases (Flat Blue)
+val PinkPrimary = BluePrimary
+val PinkHover = BlueHover
+val PinkLight = BlueLight
+val PinkLightDark = BlueLightDark
+val GradientOrange = Color(0xFF2563EB)
+val GradientPink = Color(0xFF3B82F6)
+val GradientPurple = Color(0xFF1D4ED8)
 
 // Functional Status Colors
 val SuccessGreen = Color(0xFF10B981)

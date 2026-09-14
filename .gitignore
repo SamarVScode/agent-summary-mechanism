@@ -3,3 +3,9 @@ AgentFlow-Release-APK/
 AgentFlow-Debug-APK*/
 *.zip
 *.log
+*.jpg
+master_*.png
+test_*.png
+icon_concept_*
+agentflow_icon_*
+local.properties
