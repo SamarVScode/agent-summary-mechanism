@@ -15,6 +15,7 @@ import androidx.compose.foundation.text.KeyboardActions
 import androidx.compose.foundation.text.KeyboardOptions
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Assignment
+import androidx.compose.material.icons.filled.Badge
 import androidx.compose.material.icons.filled.Lock
 import androidx.compose.material.icons.filled.Person
 import androidx.compose.material3.Button
@@ -82,14 +83,14 @@ fun LoginScreen(
                     modifier = Modifier
                         .size(68.dp)
                         .clip(CircleShape)
-                        .background(PinkLight),
+                        .background(com.agentflow.tracker.ui.theme.AgentFlowGradient),
                     contentAlignment = Alignment.Center
                 ) {
                     Icon(
                         imageVector = Icons.Default.Assignment,
                         contentDescription = "Logo",
-                        tint = PinkPrimary,
-                        modifier = Modifier.size(38.dp)
+                        tint = androidx.compose.ui.graphics.Color.White,
+                        modifier = Modifier.size(36.dp)
                     )
                 }
 
@@ -119,7 +120,7 @@ fun LoginScreen(
                             .padding(horizontal = 12.dp, vertical = 8.dp)
                     ) {
                         Text(
-                            text = uiState.errorMessage!!,
+                            text = uiState.errorMessage ?: "",
                             color = ErrorRed,
                             fontSize = 13.sp,
                             fontWeight = FontWeight.Medium
@@ -133,30 +134,35 @@ fun LoginScreen(
                     value = uiState.casperId,
                     onValueChange = viewModel::onCasperIdChanged,
                     label = { Text("Casper ID") },
+                    placeholder = { Text("e.g. 744408") },
                     leadingIcon = {
                         Icon(
-                            imageVector = Icons.Default.Person,
+                            imageVector = Icons.Default.Badge,
                             contentDescription = null,
                             tint = MaterialTheme.colorScheme.onSurfaceVariant
                         )
                     },
                     singleLine = true,
-                    keyboardOptions = KeyboardOptions(imeAction = ImeAction.Next),
+                    keyboardOptions = KeyboardOptions(
+                        keyboardType = KeyboardType.Text,
+                        imeAction = ImeAction.Next
+                    ),
                     modifier = Modifier.fillMaxWidth(),
                     shape = RoundedCornerShape(12.dp),
                     colors = OutlinedTextFieldDefaults.colors(
-                        focusedBorderColor = PinkPrimary,
+                        focusedBorderColor = com.agentflow.tracker.ui.theme.GradientPink,
                         unfocusedBorderColor = MaterialTheme.colorScheme.outline
                     )
                 )
 
-                Spacer(modifier = Modifier.height(14.dp))
+                Spacer(modifier = Modifier.height(16.dp))
 
                 // Password Field
                 OutlinedTextField(
                     value = uiState.password,
                     onValueChange = viewModel::onPasswordChanged,
-                    label = { Text("Password") },
+                    label = { Text("Password (Casper ID)") },
+                    placeholder = { Text("Enter your password") },
                     leadingIcon = {
                         Icon(
                             imageVector = Icons.Default.Lock,
@@ -174,7 +180,7 @@ fun LoginScreen(
                     modifier = Modifier.fillMaxWidth(),
                     shape = RoundedCornerShape(12.dp),
                     colors = OutlinedTextFieldDefaults.colors(
-                        focusedBorderColor = PinkPrimary,
+                        focusedBorderColor = com.agentflow.tracker.ui.theme.GradientPink,
                         unfocusedBorderColor = MaterialTheme.colorScheme.outline
                     )
                 )
@@ -182,18 +188,14 @@ fun LoginScreen(
                 Spacer(modifier = Modifier.height(24.dp))
 
                 // Submit Button
-                Button(
+                com.agentflow.tracker.ui.components.AgentFlowGradientButton(
                     onClick = viewModel::login,
                     enabled = !uiState.isLoading,
-                    modifier = Modifier
-                        .fillMaxWidth()
-                        .height(50.dp),
-                    shape = RoundedCornerShape(12.dp),
-                    colors = ButtonDefaults.buttonColors(containerColor = PinkPrimary)
+                    modifier = Modifier.fillMaxWidth()
                 ) {
                     if (uiState.isLoading) {
                         CircularProgressIndicator(
-                            color = MaterialTheme.colorScheme.surface,
+                            color = androidx.compose.ui.graphics.Color.White,
                             strokeWidth = 2.dp,
                             modifier = Modifier.size(22.dp)
                         )
@@ -201,6 +203,7 @@ fun LoginScreen(
                         Text(
                             text = "Login to AgentFlow",
                             fontWeight = FontWeight.Bold,
+                            color = androidx.compose.ui.graphics.Color.White,
                             fontSize = 15.sp
                         )
                     }

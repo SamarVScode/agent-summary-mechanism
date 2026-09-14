@@ -25,7 +25,7 @@ data class LeaveUiState(
     val selectedStartDate: String = "",
     val durationDays: Int = 1,
     val reason: String = "",
-    val editingLeaveId: Long? = null,
+    val editingLeaveId: String? = null,
     val overlappingAgents: List<String>? = null,
     val hasUnreadLeaves: Boolean = false
 )
@@ -211,7 +211,7 @@ class LeaveViewModel(
         }
     }
 
-    fun cancelLeave(id: Long) {
+    fun cancelLeave(id: String) {
         viewModelScope.launch {
             _uiState.value = _uiState.value.copy(isLoading = true)
             val res = supabaseService.cancelLeaveRequest(id)

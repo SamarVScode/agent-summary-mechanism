@@ -103,14 +103,14 @@ fun ProfileScreen(
                     modifier = Modifier
                         .size(68.dp)
                         .clip(CircleShape)
-                        .background(PinkLight),
+                        .background(com.agentflow.tracker.ui.theme.AgentFlowGradient),
                     contentAlignment = Alignment.Center
                 ) {
                     Text(
                         text = viewModel.agentName.take(1).uppercase(),
                         fontWeight = FontWeight.Bold,
                         fontSize = 28.sp,
-                        color = PinkPrimary
+                        color = androidx.compose.ui.graphics.Color.White
                     )
                 }
 

@@ -13,7 +13,7 @@ data class Agent(
 
 @Serializable
 data class Submission(
-    @SerialName("id") val id: Long? = null,
+    @SerialName("id") val id: String? = null,
     @SerialName("date") val date: String = "",
     @SerialName("agent_name") val agentName: String = "",
     @SerialName("casper_id") val casperId: String = "",
@@ -27,7 +27,7 @@ data class Submission(
 
 @Serializable
 data class LeaveRequest(
-    @SerialName("id") val id: Long? = null,
+    @SerialName("id") val id: String? = null,
     @SerialName("agent_name") val agentName: String = "",
     @SerialName("start_date") val startDate: String = "",
     @SerialName("end_date") val endDate: String = "",

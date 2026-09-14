@@ -50,10 +50,24 @@ import com.agentflow.tracker.ui.theme.PinkLight
 import com.agentflow.tracker.ui.theme.PinkPrimary
 import com.agentflow.tracker.ui.theme.SuccessGreen
 
+import androidx.compose.material.icons.filled.Sync
+import androidx.compose.material3.ExperimentalMaterial3Api
+import androidx.compose.material3.IconButton
+import androidx.compose.material3.pulltorefresh.PullToRefreshBox
+import androidx.compose.runtime.LaunchedEffect
+import com.agentflow.tracker.ui.theme.AgentFlowGradient
+import com.agentflow.tracker.ui.theme.GradientPink
+
+@OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun DashboardScreen(viewModel: DashboardViewModel) {
     val uiState by viewModel.uiState.collectAsState()
     var monthMenuExpanded by remember { mutableStateOf(false) }
+
+    // Auto-sync every time Dashboard is displayed
+    LaunchedEffect(Unit) {
+        viewModel.loadSubmissions()
+    }
 
     // If detail view is open
     if (uiState.activeDetailSubmission != null) {
@@ -70,70 +84,92 @@ fun DashboardScreen(viewModel: DashboardViewModel) {
         return
     }
 
-    Column(
-        modifier = Modifier
-            .fillMaxSize()
-            .background(MaterialTheme.colorScheme.background)
-            .padding(horizontal = 20.dp)
+    PullToRefreshBox(
+        isRefreshing = uiState.isLoading,
+        onRefresh = { viewModel.loadSubmissions() },
+        modifier = Modifier.fillMaxSize()
     ) {
-        Spacer(modifier = Modifier.height(16.dp))
-
-        // Header Row with Title & Month Selector
-        Row(
-            modifier = Modifier.fillMaxWidth(),
-            horizontalArrangement = Arrangement.SpaceBetween,
-            verticalAlignment = Alignment.CenterVertically
+        Column(
+            modifier = Modifier
+                .fillMaxSize()
+                .background(MaterialTheme.colorScheme.background)
+                .padding(horizontal = 20.dp)
         ) {
-            Column {
-                Text(
-                    text = "Work Logs",
-                    style = MaterialTheme.typography.titleLarge,
-                    fontWeight = FontWeight.Bold,
-                    color = MaterialTheme.colorScheme.onSurface
-                )
-                Text(
-                    text = "Daily tally and screenshot records",
-                    style = MaterialTheme.typography.labelSmall,
-                    color = MaterialTheme.colorScheme.onSurfaceVariant
-                )
-            }
+            Spacer(modifier = Modifier.height(16.dp))
 
-            // Month Dropdown Box
-            Box {
-                Row(
-                    modifier = Modifier
-                        .clip(RoundedCornerShape(10.dp))
-                        .background(MaterialTheme.colorScheme.surface)
-                        .border(1.dp, MaterialTheme.colorScheme.outline, RoundedCornerShape(10.dp))
-                        .clickable { monthMenuExpanded = true }
-                        .padding(horizontal = 12.dp, vertical = 8.dp),
-                    verticalAlignment = Alignment.CenterVertically
-                ) {
+            // Header Row with Title & Month Selector & Sync Button
+            Row(
+                modifier = Modifier.fillMaxWidth(),
+                horizontalArrangement = Arrangement.SpaceBetween,
+                verticalAlignment = Alignment.CenterVertically
+            ) {
+                Column {
                     Text(
-                        text = uiState.selectedMonth,
-                        fontSize = 13.sp,
-                        fontWeight = FontWeight.SemiBold,
+                        text = "Work Logs",
+                        style = MaterialTheme.typography.titleLarge,
+                        fontWeight = FontWeight.Bold,
                         color = MaterialTheme.colorScheme.onSurface
                     )
-                    Icon(
-                        imageVector = Icons.Default.ArrowDropDown,
-                        contentDescription = null,
-                        tint = MaterialTheme.colorScheme.onSurfaceVariant
+                    Text(
+                        text = "Daily tally and screenshot records",
+                        style = MaterialTheme.typography.labelSmall,
+                        color = MaterialTheme.colorScheme.onSurfaceVariant
                     )
                 }
 
-                DropdownMenu(
-                    expanded = monthMenuExpanded,
-                    onDismissRequest = { monthMenuExpanded = false }
-                ) {
-                    uiState.availableMonths.forEach { month ->
-                        DropdownMenuItem(
-                            text = { Text(month) },
-                            onClick = {
-                                viewModel.selectMonth(month)
-                                monthMenuExpanded = false
-                            }
+                Row(verticalAlignment = Alignment.CenterVertically) {
+                    // Manual Sync Icon Button
+                    IconButton(
+                        onClick = { viewModel.loadSubmissions() },
+                        modifier = Modifier.size(38.dp)
+                    ) {
+                        Icon(
+                            imageVector = Icons.Default.Sync,
+                            contentDescription = "Refresh",
+                            tint = GradientPink
                         )
+                    }
+
+                    Spacer(modifier = Modifier.width(6.dp))
+
+                    // Month Dropdown Box
+                    Box {
+                        Row(
+                            modifier = Modifier
+                                .clip(RoundedCornerShape(10.dp))
+                                .background(MaterialTheme.colorScheme.surface)
+                                .border(1.dp, MaterialTheme.colorScheme.outline, RoundedCornerShape(10.dp))
+                                .clickable { monthMenuExpanded = true }
+                                .padding(horizontal = 12.dp, vertical = 8.dp),
+                            verticalAlignment = Alignment.CenterVertically
+                        ) {
+                            Text(
+                                text = uiState.selectedMonth,
+                                fontSize = 13.sp,
+                                fontWeight = FontWeight.SemiBold,
+                                color = MaterialTheme.colorScheme.onSurface
+                            )
+                            Icon(
+                                imageVector = Icons.Default.ArrowDropDown,
+                                contentDescription = null,
+                                tint = MaterialTheme.colorScheme.onSurfaceVariant
+                            )
+                        }
+
+                        DropdownMenu(
+                            expanded = monthMenuExpanded,
+                            onDismissRequest = { monthMenuExpanded = false }
+                        ) {
+                            uiState.availableMonths.forEach { month ->
+                                DropdownMenuItem(
+                                    text = { Text(month) },
+                                    onClick = {
+                                        viewModel.selectMonth(month)
+                                        monthMenuExpanded = false
+                                    }
+                                )
+                            }
+                        }
                     }
                 }
             }
@@ -293,14 +329,16 @@ fun CyclePill(
     selected: Boolean,
     onClick: () -> Unit
 ) {
-    val bg = if (selected) PinkPrimary else MaterialTheme.colorScheme.surface
-    val border = if (selected) PinkPrimary else MaterialTheme.colorScheme.outline
+    val border = if (selected) Color.Transparent else MaterialTheme.colorScheme.outline
     val textColor = if (selected) Color.White else MaterialTheme.colorScheme.onSurface
 
     Row(
         modifier = Modifier
             .clip(CircleShape)
-            .background(bg)
+            .then(
+                if (selected) Modifier.background(AgentFlowGradient)
+                else Modifier.background(MaterialTheme.colorScheme.surface)
+            )
             .border(1.dp, border, CircleShape)
             .clickable { onClick() }
             .padding(horizontal = 14.dp, vertical = 6.dp),

@@ -42,32 +42,66 @@ import com.agentflow.tracker.ui.theme.SuccessGreenLight
 import com.agentflow.tracker.ui.theme.WarningYellow
 import com.agentflow.tracker.ui.theme.WarningYellowLight
 
+import androidx.compose.material.icons.filled.Sync
+import androidx.compose.material3.ExperimentalMaterial3Api
+import androidx.compose.material3.pulltorefresh.PullToRefreshBox
+import androidx.compose.runtime.LaunchedEffect
+import com.agentflow.tracker.ui.theme.GradientPink
+
+@OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun LeaveScreen(viewModel: LeaveViewModel) {
     val uiState by viewModel.uiState.collectAsState()
 
+    // Auto-sync leaves whenever this tab is opened
+    LaunchedEffect(Unit) {
+        viewModel.loadLeaves()
+    }
+
     Box(modifier = Modifier.fillMaxSize()) {
-        LazyColumn(
-            modifier = Modifier
-                .fillMaxSize()
-                .background(MaterialTheme.colorScheme.background)
-                .padding(horizontal = 20.dp)
+        PullToRefreshBox(
+            isRefreshing = uiState.isLoading,
+            onRefresh = { viewModel.loadLeaves() },
+            modifier = Modifier.fillMaxSize()
         ) {
-            item {
-                Spacer(modifier = Modifier.height(16.dp))
-                Text(
-                    text = "Leave Management",
-                    style = MaterialTheme.typography.titleLarge,
-                    fontWeight = FontWeight.Bold,
-                    color = MaterialTheme.colorScheme.onSurface
-                )
-                Text(
-                    text = "Request and view your leaves",
-                    style = MaterialTheme.typography.labelSmall,
-                    color = MaterialTheme.colorScheme.onSurfaceVariant,
-                    modifier = Modifier.padding(top = 2.dp, bottom = 16.dp)
-                )
-            }
+            LazyColumn(
+                modifier = Modifier
+                    .fillMaxSize()
+                    .background(MaterialTheme.colorScheme.background)
+                    .padding(horizontal = 20.dp)
+            ) {
+                item {
+                    Spacer(modifier = Modifier.height(16.dp))
+                    Row(
+                        modifier = Modifier.fillMaxWidth(),
+                        horizontalArrangement = Arrangement.SpaceBetween,
+                        verticalAlignment = Alignment.CenterVertically
+                    ) {
+                        Column {
+                            Text(
+                                text = "Leave Management",
+                                style = MaterialTheme.typography.titleLarge,
+                                fontWeight = FontWeight.Bold,
+                                color = MaterialTheme.colorScheme.onSurface
+                            )
+                            Text(
+                                text = "Request and view your leaves",
+                                style = MaterialTheme.typography.labelSmall,
+                                color = MaterialTheme.colorScheme.onSurfaceVariant,
+                                modifier = Modifier.padding(top = 2.dp)
+                            )
+                        }
+
+                        IconButton(onClick = { viewModel.loadLeaves() }) {
+                            Icon(
+                                imageVector = Icons.Default.Sync,
+                                contentDescription = "Refresh",
+                                tint = GradientPink
+                            )
+                        }
+                    }
+                    Spacer(modifier = Modifier.height(16.dp))
+                }
 
             // Month Calendar
             item {

@@ -2,11 +2,14 @@ package com.agentflow.tracker.ui.components
 
 import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.Box
+import androidx.compose.foundation.layout.WindowInsets
 import androidx.compose.foundation.layout.fillMaxWidth
-import androidx.compose.foundation.layout.height
+import androidx.compose.foundation.layout.navigationBars
 import androidx.compose.foundation.layout.offset
+import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.shape.CircleShape
+import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.AddCircleOutline
 import androidx.compose.material.icons.filled.DateRange
@@ -21,13 +24,19 @@ import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.draw.drawBehind
+import androidx.compose.ui.geometry.Offset
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.vector.ImageVector
+import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import com.agentflow.tracker.ui.navigation.Screen
+import com.agentflow.tracker.ui.theme.AgentFlowGradient
 import com.agentflow.tracker.ui.theme.ErrorRed
-import com.agentflow.tracker.ui.theme.PinkPrimary
+import com.agentflow.tracker.ui.theme.GradientPink
+import com.agentflow.tracker.ui.theme.PinkLight
+import com.agentflow.tracker.ui.theme.PinkLightDark
 
 data class NavigationItem(
     val route: String,
@@ -48,10 +57,22 @@ fun AgentFlowBottomBar(
         NavigationItem(Screen.Profile.route, "Profile", Icons.Default.PersonOutline)
     )
 
+    val outlineColor = MaterialTheme.colorScheme.outline.copy(alpha = 0.4f)
+
     NavigationBar(
-        modifier = Modifier.fillMaxWidth().height(68.dp),
+        modifier = Modifier
+            .fillMaxWidth()
+            .drawBehind {
+                drawLine(
+                    color = outlineColor,
+                    start = Offset(0f, 0f),
+                    end = Offset(size.width, 0f),
+                    strokeWidth = 1.dp.toPx()
+                )
+            },
         containerColor = MaterialTheme.colorScheme.surface,
-        tonalElevation = 8.dp
+        tonalElevation = 0.dp,
+        windowInsets = WindowInsets.navigationBars
     ) {
         items.forEach { item ->
             val isSelected = currentRoute == item.route
@@ -80,13 +101,14 @@ fun AgentFlowBottomBar(
                     Text(
                         text = item.label,
                         fontSize = 11.sp,
-                        color = if (isSelected) PinkPrimary else MaterialTheme.colorScheme.onSurfaceVariant
+                        fontWeight = if (isSelected) FontWeight.SemiBold else FontWeight.Normal,
+                        color = if (isSelected) GradientPink else MaterialTheme.colorScheme.onSurfaceVariant
                     )
                 },
                 colors = NavigationBarItemDefaults.colors(
-                    selectedIconColor = PinkPrimary,
-                    unselectedIconColor = MaterialTheme.colorScheme.onSurfaceVariant,
-                    indicatorColor = Color.Transparent
+                    selectedIconColor = GradientPink,
+                    unselectedIconColor = MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.7f),
+                    indicatorColor = PinkLightDark
                 )
             )
         }

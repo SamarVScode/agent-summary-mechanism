@@ -34,6 +34,7 @@ import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
+import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.input.KeyboardType
@@ -198,25 +199,25 @@ fun ConfirmSubmissionSheet(
                     Text("Cancel")
                 }
 
-                Button(
+                AgentFlowGradientButton(
                     onClick = {
                         val t = totalText.toIntOrNull() ?: 0
                         val c = completedText.toIntOrNull() ?: 0
                         onConfirm(t, c)
                     },
-                    modifier = Modifier.weight(1.5f).height(48.dp),
+                    modifier = Modifier.weight(1.5f),
+                    height = 48.dp,
                     shape = RoundedCornerShape(10.dp),
-                    colors = ButtonDefaults.buttonColors(containerColor = PinkPrimary),
                     enabled = !isSubmitting
                 ) {
                     if (isSubmitting) {
                         CircularProgressIndicator(
-                            color = MaterialTheme.colorScheme.surface,
+                            color = Color.White,
                             modifier = Modifier.size(20.dp),
                             strokeWidth = 2.dp
                         )
                     } else {
-                        Text("Confirm & Submit", fontWeight = FontWeight.Bold)
+                        Text("Confirm & Submit", fontWeight = FontWeight.Bold, color = Color.White)
                     }
                 }
             }

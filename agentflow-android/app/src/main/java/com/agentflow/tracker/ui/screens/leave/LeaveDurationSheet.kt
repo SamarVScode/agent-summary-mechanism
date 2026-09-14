@@ -33,9 +33,11 @@ import androidx.compose.runtime.Composable
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
+import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
+import com.agentflow.tracker.ui.components.AgentFlowGradientButton
 import com.agentflow.tracker.ui.theme.PinkLight
 import com.agentflow.tracker.ui.theme.PinkPrimary
 import java.text.SimpleDateFormat
@@ -211,18 +213,16 @@ fun LeaveDurationSheet(
 
             Spacer(modifier = Modifier.height(24.dp))
 
-            Button(
+            AgentFlowGradientButton(
                 onClick = onSubmit,
-                modifier = Modifier
-                    .fillMaxWidth()
-                    .height(48.dp),
+                modifier = Modifier.fillMaxWidth(),
+                height = 48.dp,
                 shape = RoundedCornerShape(12.dp),
-                colors = ButtonDefaults.buttonColors(containerColor = PinkPrimary),
                 enabled = !isSubmitting
             ) {
                 if (isSubmitting) {
                     CircularProgressIndicator(
-                        color = MaterialTheme.colorScheme.surface,
+                        color = Color.White,
                         modifier = Modifier.size(20.dp),
                         strokeWidth = 2.dp
                     )
@@ -230,6 +230,7 @@ fun LeaveDurationSheet(
                     Text(
                         text = if (isEditing) "Update Leave Request" else "Submit Leave Request",
                         fontWeight = FontWeight.Bold,
+                        color = Color.White,
                         fontSize = 15.sp
                     )
                 }

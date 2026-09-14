@@ -21,6 +21,7 @@ class SupabaseService {
         ignoreUnknownKeys = true
         coerceInputValues = true
         isLenient = true
+        explicitNulls = false
     }
 
     private val client = OkHttpClient.Builder()
@@ -74,7 +75,7 @@ class SupabaseService {
                     return@withContext Result.failure(IOException("Duplicate check error: ${response.code}"))
                 }
                 val bodyStr = response.body?.string().orEmpty()
-                val list = json.decodeFromString<List<Map<String, Long>>>(bodyStr)
+                val list = json.decodeFromString<List<Map<String, String>>>(bodyStr)
                 Result.success(list.isNotEmpty())
             }
         } catch (e: Exception) {
@@ -219,7 +220,7 @@ class SupabaseService {
         startDate: String,
         endDate: String,
         reason: String,
-        editingId: Long? = null
+        editingId: String? = null
     ): Result<Unit> = withContext(Dispatchers.IO) {
         try {
             val isEdit = editingId != null
@@ -253,7 +254,7 @@ class SupabaseService {
         }
     }
 
-    suspend fun cancelLeaveRequest(id: Long): Result<Unit> = withContext(Dispatchers.IO) {
+    suspend fun cancelLeaveRequest(id: String): Result<Unit> = withContext(Dispatchers.IO) {
         try {
             val url = "$baseUrl/rest/v1/leave_requests?id=eq.$id"
             val request = newRequestBuilder(url).delete().build()
@@ -269,7 +270,7 @@ class SupabaseService {
         }
     }
 
-    suspend fun checkUnreadLeaves(agentName: String): Result<List<Long>> = withContext(Dispatchers.IO) {
+    suspend fun checkUnreadLeaves(agentName: String): Result<List<String>> = withContext(Dispatchers.IO) {
         try {
             val encodedName = URLEncoder.encode(agentName, "UTF-8")
             val url = "$baseUrl/rest/v1/leave_requests?agent_name=eq.$encodedName&is_read=is.false&select=id"
@@ -280,7 +281,7 @@ class SupabaseService {
                     return@withContext Result.failure(IOException("Unread check failed: ${response.code}"))
                 }
                 val bodyStr = response.body?.string().orEmpty()
-                val list = json.decodeFromString<List<Map<String, Long>>>(bodyStr)
+                val list = json.decodeFromString<List<Map<String, String>>>(bodyStr)
                 Result.success(list.mapNotNull { it["id"] })
             }
         } catch (e: Exception) {
@@ -288,7 +289,7 @@ class SupabaseService {
         }
     }
 
-    suspend fun markLeavesAsRead(ids: List<Long>): Result<Unit> = withContext(Dispatchers.IO) {
+    suspend fun markLeavesAsRead(ids: List<String>): Result<Unit> = withContext(Dispatchers.IO) {
         if (ids.isEmpty()) return@withContext Result.success(Unit)
         try {
             val idsParam = ids.joinToString(",")
