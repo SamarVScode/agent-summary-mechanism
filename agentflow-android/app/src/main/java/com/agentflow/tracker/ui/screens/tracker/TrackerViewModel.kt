@@ -162,7 +162,6 @@ class TrackerViewModel(
                 } ?: throw Exception("Failed to process image data")
 
                 val safeAgent = agentName.trim().replace(Regex("[^a-zA-Z0-9]"), "_")
-                val dateFormatted = _uiState.value.selectedDate
                 val fileName = "${safeAgent}_${dateFormatted}_${System.currentTimeMillis()}.jpg"
 
                 // Upload to Supabase Storage
