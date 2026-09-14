@@ -4,6 +4,7 @@ AgentFlow-Debug-APK*/
 *.zip
 *.log
 *.jpg
+*.jpeg
 master_*.png
 test_*.png
 icon_concept_*

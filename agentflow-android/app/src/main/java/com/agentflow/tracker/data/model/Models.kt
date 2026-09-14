@@ -63,5 +63,7 @@ data class CycleStats(
 data class OcrExtractedCounts(
     val totalCount: Int?,
     val completedCount: Int?,
+    val failedCount: Int? = null,
+    val pendingCount: Int? = null,
     val rawText: String
 )

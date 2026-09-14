@@ -8,7 +8,7 @@ This document serves as the permanent reference for **AgentFlow**, documenting k
 
 - **Application Name**: AgentFlow
 - **Package ID**: `com.agentflow.tracker`
-- **Current Version**: `1.0.2` (versionCode: `3`)
+- **Current Version**: `1.0.3` (versionCode: `4`)
 - **Tech Stack**: Kotlin 2.0.20, Jetpack Compose, Material 3, Coroutines/Flow, Supabase (PostgreSQL + Auth + Storage), Google ML Kit (on-device OCR), Coil (image loading), OkHttp3.
 - **GitHub Repository**: [`SamarVScode/agent-summary-mechanism`](https://github.com/SamarVScode/agent-summary-mechanism) (branch: `main`).
 

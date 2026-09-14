@@ -65,19 +65,28 @@ class TrackerViewModel(
                 val hash = HashUtils.calculateSha256(context, uri)
                 currentFileHash = hash
 
-                // 2. Check for duplicates in Supabase
+                // 2. Check for duplicates in Supabase across all history
                 val dupCheck = supabaseService.checkDuplicateHash(hash)
                 if (dupCheck.getOrDefault(false)) {
                     _uiState.value = _uiState.value.copy(
                         phase = TrackerPhase.Idle,
-                        errorMessage = "This screenshot has already been submitted."
+                        errorMessage = "Duplicate screenshot: This exact image has already been submitted in payout history."
                     )
                     return@launch
                 }
 
-                // 3. Process with ML Kit OCR
+                // 3. Process with ML Kit OCR (spatial grid + mathematical validation)
                 val ocrResult = ocrExtractor.extractCounts(uri)
                 ocrResult.onSuccess { counts ->
+                    val pending = counts.pendingCount ?: 0
+                    if (pending > 0) {
+                        _uiState.value = _uiState.value.copy(
+                            phase = TrackerPhase.Idle,
+                            errorMessage = "Incomplete Runsheet: You have $pending pending task(s). Please complete all pending deliveries before submitting."
+                        )
+                        return@onSuccess
+                    }
+
                     val total = counts.totalCount ?: 0
                     val completed = counts.completedCount ?: 0
                     if (total > 0 || completed > 0) {
@@ -111,6 +120,18 @@ class TrackerViewModel(
 
         viewModelScope.launch {
             try {
+                val dateFormatted = _uiState.value.selectedDate
+
+                // Strict deduplication: Check if agent already submitted these exact counts on this date
+                val dupSubmission = supabaseService.checkDuplicateSubmission(casperId, dateFormatted, total, completed)
+                if (dupSubmission.getOrDefault(false)) {
+                    _uiState.value = _uiState.value.copy(
+                        phase = TrackerPhase.Idle,
+                        errorMessage = "Duplicate submission: A runsheet for $dateFormatted with $total total and $completed completed deliveries was already submitted."
+                    )
+                    return@launch
+                }
+
                 // Compress & downsample image before upload to avoid memory pressure & GC pauses
                 val bytes = withContext(Dispatchers.IO) {
                     val stream = context.contentResolver.openInputStream(uri) ?: return@withContext null

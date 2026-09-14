@@ -83,6 +83,26 @@ class SupabaseService {
         }
     }
 
+    suspend fun checkDuplicateSubmission(casperId: String, date: String, total: Int, completed: Int): Result<Boolean> = withContext(Dispatchers.IO) {
+        try {
+            val encodedCasper = URLEncoder.encode(casperId, "UTF-8")
+            val encodedDate = URLEncoder.encode(date, "UTF-8")
+            val url = "$baseUrl/rest/v1/submissions?casper_id=eq.$encodedCasper&date=eq.$encodedDate&total_count=eq.$total&completed_count=eq.$completed&select=id"
+            val request = newRequestBuilder(url).get().build()
+
+            client.newCall(request).execute().use { response ->
+                if (!response.isSuccessful) {
+                    return@withContext Result.failure(IOException("Duplicate submission check error: ${response.code}"))
+                }
+                val bodyStr = response.body?.string().orEmpty()
+                val list = json.decodeFromString<List<Map<String, String>>>(bodyStr)
+                Result.success(list.isNotEmpty())
+            }
+        } catch (e: Exception) {
+            Result.failure(e)
+        }
+    }
+
     suspend fun uploadScreenshot(fileName: String, imageBytes: ByteArray, mimeType: String): Result<String> =
         withContext(Dispatchers.IO) {
             try {
