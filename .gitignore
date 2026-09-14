@@ -1,3 +1,5 @@
-AgentFlow-Debug-APK/
+AgentFlow-*-APK*/
+AgentFlow-Release-APK/
+AgentFlow-Debug-APK*/
 *.zip
 *.log

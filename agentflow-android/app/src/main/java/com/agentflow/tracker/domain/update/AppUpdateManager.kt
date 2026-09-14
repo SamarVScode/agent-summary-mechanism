@@ -66,7 +66,23 @@ class AppUpdateManager(private val context: Context) {
                 .build()
 
             val response = client.newCall(request).execute()
-            if (!response.isSuccessful) {
+            var jsonStr = if (response.isSuccessful) response.body?.string().orEmpty() else ""
+            if (!response.isSuccessful && response.code == 404) {
+                val fallbackReq = Request.Builder()
+                    .url("https://api.github.com/repos/$githubRepo/releases")
+                    .header("Accept", "application/vnd.github.v3+json")
+                    .header("User-Agent", "AgentFlow-Android/${BuildConfig.VERSION_NAME}")
+                    .build()
+                val fallbackResp = client.newCall(fallbackReq).execute()
+                if (fallbackResp.isSuccessful) {
+                    val arr = org.json.JSONArray(fallbackResp.body?.string().orEmpty())
+                    if (arr.length() > 0) {
+                        jsonStr = arr.getJSONObject(0).toString()
+                    }
+                }
+            }
+
+            if (jsonStr.isBlank()) {
                 if (manualCheck) {
                     _updateState.value = UpdateState.Error("No release found on GitHub (${response.code})")
                 } else {
@@ -75,12 +91,12 @@ class AppUpdateManager(private val context: Context) {
                 return@withContext
             }
 
-            val jsonStr = response.body?.string().orEmpty()
             val json = JSONObject(jsonStr)
 
             val rawTagName = json.optString("tag_name", "")
-            val cleanRemoteVersion = rawTagName.trim().removePrefix("v")
-            val body = json.optString("body", "• Performance improvements and bug fixes.")
+            val cleanRemoteVersion = rawTagName.trim().removePrefix("v").removePrefix("V")
+            val rawBody = json.optString("body", "").trim()
+            val body = if (rawBody.isNotBlank()) rawBody else "• Performance improvements and bug fixes."
 
             // Find APK in assets
             val assetsArray = json.optJSONArray("assets")

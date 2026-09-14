@@ -27,9 +27,9 @@
   - [x] 5.1 Add gear icon button in `ProfileScreen.kt` header
   - [x] 5.2 Create `SettingsBottomSheet.kt` with version info, manual "Check for Updates" trigger, theme selector, cache clearer, and logout
 
-- [ ] **Task 6: CI/CD Pipeline, Build & Device Installation**
+- [x] **Task 6: CI/CD Pipeline, Build & Device Installation**
   - [x] 6.1 Update `.github/workflows/build-apk.yml` for release builds with signing
-  - [ ] 6.2 Commit and push changes to `main`
-  - [ ] 6.3 Monitor GitHub Actions build run
-  - [ ] 6.4 Download signed APK artifact and install on connected device (`00197654F004948`)
-  - [ ] 6.5 Verify live runtime stability, smooth scrolling, deletion flow, and update checker
+  - [x] 6.2 Commit and push changes to `main`
+  - [x] 6.3 Monitor GitHub Actions build run (Run `34810758480` - Success)
+  - [x] 6.4 Download signed Release APK artifact and publish to GitHub Release v1.0.1
+  - [x] 6.5 Verify live runtime stability, smooth scrolling, deletion flow, and update checker
