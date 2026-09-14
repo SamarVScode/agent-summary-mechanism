@@ -245,15 +245,69 @@ This roadmap documents every identified source of latency, frame drops (jank), m
 
 ---
 
+---
+
+## 🗑️ Phase 6: Work Log Deletion from Detail View
+
+### [ ] 20. Delete Button on Detail View Header
+* **Affected File**: `agentflow-android/app/src/main/java/com/agentflow/tracker/ui/screens/dashboard/DetailHistoryView.kt`
+* **Feature**:
+  - In the top navigation row (opposite the Back button and Date title), add a `Delete` icon button (`Icons.Outlined.DeleteOutline`) with `tint = ErrorRed`.
+  - Tapping opens a confirmation dialog.
+
+---
+
+### [ ] 21. Deletion Confirmation Dialog
+* **Affected File**: `agentflow-android/app/src/main/java/com/agentflow/tracker/ui/screens/dashboard/DetailHistoryView.kt`
+* **Feature**:
+  - Displays: *"Delete this work log for [Date]?"*
+  - Explanation: *"This will permanently remove your recorded tally and screenshot from Supabase. This action cannot be undone."*
+  - Actions: **Cancel** (dismisses) and **Delete** (triggers deletion with a loading spinner).
+
+---
+
+### [ ] 22. Supabase Delete API & Dashboard State Sync
+* **Affected Files**:
+  - `agentflow-android/app/src/main/java/com/agentflow/tracker/data/api/SupabaseService.kt`
+  - `agentflow-android/app/src/main/java/com/agentflow/tracker/ui/screens/dashboard/DashboardViewModel.kt`
+* **Feature**:
+  - `deleteSubmissionsByDate(agentName: String, date: String)`: executes `DELETE FROM submissions WHERE agent_name = $agentName AND date = $date`.
+  - On success: closes the detail view, removes the deleted date from `rawSubmissions`, recalculates Cycle 1 & 2 tallies, and updates the list instantly.
+
+---
+
+## ⚙️ Phase 7: Profile Settings Button & Menu
+
+### [ ] 23. Profile Header Settings Button
+* **Affected File**: `agentflow-android/app/src/main/java/com/agentflow/tracker/ui/screens/profile/ProfileScreen.kt`
+* **Feature**:
+  - Adds a gear icon button (`Icons.Default.Settings`) to the top-right header of the Profile screen.
+  - Tapping opens the modular Settings Bottom Sheet.
+
+---
+
+### [ ] 24. Modular Settings Bottom Sheet
+* **New File**: `agentflow-android/app/src/main/java/com/agentflow/tracker/ui/screens/profile/SettingsBottomSheet.kt`
+* **Feature**:
+  - **In-App Update Checker**: shows current version and manual "Check for Updates" button.
+  - **Theme Mode**: houses the Light / Dark / System segmented selector.
+  - **Cache Manager**: displays cached screenshot storage size with a "Clear Cache" button.
+  - **Account & Logout**: clean logout confirmation prompt.
+
+---
+
 ## 📌 Implementation Order Recommendation
-1. **Sprint 1 (Fastest, High Impact)**:
+1. **Sprint 1 (Fastest, High Impact & New Controls)**:
    - Items #1 (Release Build + R8), #2 (List Keys), #3 (Background Threading), #4 (Screenshot Downsampling).
    - Item #15 (Persistent Cryptographic Keystore).
-2. **Sprint 2 (In-App Updates & Network)**:
+   - Items #20, #21, #22 (History Entry Deletion & Confirmation Modal).
+   - Items #23, #24 (Profile Settings Button & Sheet).
+2. **Sprint 2 (In-App Auto-Updates & Parallel Network)**:
    - Items #16, #17, #18, #19 (Complete In-App Auto-Update System).
    - Items #12 (Parallel Network Calls), #9 (Calendar Math Caching).
 3. **Sprint 3 (Rendering & GPU Smoothness)**:
    - Items #5 (Flat Outline Shadows), #8 (Coil Cache), #7 (`.drawBehind` Badges).
 4. **Sprint 4 (Deep Architecture & AOT)**:
    - Items #6 (Overdraw), #10 (Date Allocations), #11 (`@Immutable` stability), #13 (OCR Pre-warming), #14 (Baseline Profiles).
+
 
