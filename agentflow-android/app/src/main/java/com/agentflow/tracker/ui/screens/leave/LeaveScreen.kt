@@ -129,7 +129,7 @@ fun LeaveScreen(viewModel: LeaveViewModel) {
                     }
                 }
             } else {
-                items(uiState.userLeaves) { leave ->
+                items(uiState.userLeaves, key = { it.id ?: "${it.startDate}_${it.endDate}" }) { leave ->
                     val isPending = leave.status.lowercase() == "pending"
                     val isApproved = leave.status.lowercase() == "approved"
 

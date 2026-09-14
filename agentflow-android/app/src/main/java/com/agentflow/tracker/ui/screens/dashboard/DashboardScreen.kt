@@ -66,7 +66,8 @@ fun DashboardScreen(viewModel: DashboardViewModel) {
             submission = uiState.activeDetailSubmission!!,
             rateAmount = viewModel.rateAmount,
             onBack = viewModel::closeDetail,
-            onImageClick = viewModel::showFullScreenImage
+            onImageClick = viewModel::showFullScreenImage,
+            onDelete = { viewModel.deleteDailySubmission(uiState.activeDetailSubmission!!.date) }
         )
         ImageViewerDialog(
             imageUrl = uiState.fullScreenImageUrl,
@@ -226,7 +227,7 @@ fun DashboardScreen(viewModel: DashboardViewModel) {
                         .weight(1f),
                     verticalArrangement = Arrangement.spacedBy(12.dp)
                 ) {
-                    items(uiState.filteredSubmissions) { sub ->
+                    items(uiState.filteredSubmissions, key = { it.date }) { sub ->
                         val earned = (sub.completedCount * viewModel.rateAmount).toInt()
 
                         Card(

@@ -7,6 +7,7 @@ import com.agentflow.tracker.data.model.GroupedDailySubmission
 import com.agentflow.tracker.data.model.ScreenshotItem
 import com.agentflow.tracker.data.model.Submission
 import com.agentflow.tracker.domain.date.DateUtils
+import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
@@ -77,69 +78,73 @@ class DashboardViewModel(
     }
 
     private fun processSubmissions() {
-        // 1. Group by date
-        val groupedMap = mutableMapOf<String, MutableList<Submission>>()
-        val monthsSet = mutableSetOf<String>()
-        monthsSet.add(DateUtils.getCurrentMonthYear())
+        viewModelScope.launch(Dispatchers.Default) {
+            val subs = rawSubmissions
+            val currentMonth = _uiState.value.selectedMonth
+            val currentCycle = _uiState.value.selectedCycle
 
-        for (sub in rawSubmissions) {
-            val date = sub.date
-            val list = groupedMap.getOrPut(date) { mutableListOf() }
-            list.add(sub)
+            // 1. Group by date
+            val groupedMap = mutableMapOf<String, MutableList<Submission>>()
+            val monthsSet = mutableSetOf<String>()
+            monthsSet.add(DateUtils.getCurrentMonthYear())
 
-            val monthStr = DateUtils.getMonthYearStr(date)
-            if (monthStr != "Unknown") {
-                monthsSet.add(monthStr)
+            for (sub in subs) {
+                val date = sub.date
+                val list = groupedMap.getOrPut(date) { mutableListOf() }
+                list.add(sub)
+
+                val monthStr = DateUtils.getMonthYearStr(date)
+                if (monthStr != "Unknown") {
+                    monthsSet.add(monthStr)
+                }
             }
-        }
 
-        val groupedList = groupedMap.map { (date, subs) ->
-            val total = subs.sumOf { it.totalCount }
-            val completed = subs.sumOf { it.completedCount }
-            val screenshots = subs.filter { it.imageUrl.isNotBlank() }.map {
-                ScreenshotItem(
-                    url = it.imageUrl,
-                    createdAt = it.createdAt,
-                    totalCount = it.totalCount,
-                    completedCount = it.completedCount
+            val groupedList = groupedMap.map { (date, dSubs) ->
+                val total = dSubs.sumOf { it.totalCount }
+                val completed = dSubs.sumOf { it.completedCount }
+                val screenshots = dSubs.filter { it.imageUrl.isNotBlank() }.map {
+                    ScreenshotItem(
+                        url = it.imageUrl,
+                        createdAt = it.createdAt,
+                        totalCount = it.totalCount,
+                        completedCount = it.completedCount
+                    )
+                }
+                GroupedDailySubmission(
+                    date = date,
+                    totalCount = total,
+                    completedCount = completed,
+                    screenshots = screenshots
                 )
+            }.sortedByDescending { DateUtils.parseDate(it.date)?.time ?: 0 }
+
+            val availableMonths = monthsSet.toList()
+
+            // Calculate cycle counts for the selected month
+            val monthSubs = groupedList.filter { DateUtils.getMonthYearStr(it.date) == currentMonth }
+            var c1 = 0
+            var c2 = 0
+            for (sub in monthSubs) {
+                if (DateUtils.dateMatchesCycle(sub.date, "c1")) c1++
+                if (DateUtils.dateMatchesCycle(sub.date, "c2")) c2++
             }
-            GroupedDailySubmission(
-                date = date,
-                totalCount = total,
-                completedCount = completed,
-                screenshots = screenshots
+            val cycleCounts = mapOf("all" to monthSubs.size, "c1" to c1, "c2" to c2)
+
+            // Filter by month & cycle
+            val filtered = groupedList.filter { sub ->
+                val matchMonth = DateUtils.getMonthYearStr(sub.date) == currentMonth
+                val matchCycle = DateUtils.dateMatchesCycle(sub.date, currentCycle)
+                matchMonth && matchCycle
+            }
+
+            _uiState.value = _uiState.value.copy(
+                isLoading = false,
+                availableMonths = availableMonths,
+                groupedSubmissions = groupedList,
+                filteredSubmissions = filtered,
+                cycleCounts = cycleCounts
             )
-        }.sortedByDescending { DateUtils.parseDate(it.date)?.time ?: 0 }
-
-        val currentMonth = _uiState.value.selectedMonth
-        val availableMonths = monthsSet.toList()
-
-        // Calculate cycle counts for the selected month
-        val monthSubs = groupedList.filter { DateUtils.getMonthYearStr(it.date) == currentMonth }
-        var c1 = 0
-        var c2 = 0
-        for (sub in monthSubs) {
-            if (DateUtils.dateMatchesCycle(sub.date, "c1")) c1++
-            if (DateUtils.dateMatchesCycle(sub.date, "c2")) c2++
         }
-        val cycleCounts = mapOf("all" to monthSubs.size, "c1" to c1, "c2" to c2)
-
-        // Filter by month & cycle
-        val cycle = _uiState.value.selectedCycle
-        val filtered = groupedList.filter { sub ->
-            val matchMonth = DateUtils.getMonthYearStr(sub.date) == currentMonth
-            val matchCycle = DateUtils.dateMatchesCycle(sub.date, cycle)
-            matchMonth && matchCycle
-        }
-
-        _uiState.value = _uiState.value.copy(
-            isLoading = false,
-            availableMonths = availableMonths,
-            groupedSubmissions = groupedList,
-            filteredSubmissions = filtered,
-            cycleCounts = cycleCounts
-        )
     }
 
     fun selectMonth(month: String) {
@@ -158,6 +163,26 @@ class DashboardViewModel(
 
     fun closeDetail() {
         _uiState.value = _uiState.value.copy(activeDetailSubmission = null)
+    }
+
+    fun deleteDailySubmission(date: String) {
+        viewModelScope.launch {
+            _uiState.value = _uiState.value.copy(isLoading = true)
+            val result = supabaseService.deleteSubmissionsByDate(agentName, date)
+            result.onSuccess {
+                rawSubmissions = rawSubmissions.filter { it.date != date }
+                processSubmissions()
+                _uiState.value = _uiState.value.copy(
+                    activeDetailSubmission = null,
+                    isLoading = false
+                )
+            }.onFailure { error ->
+                _uiState.value = _uiState.value.copy(
+                    isLoading = false,
+                    errorMessage = error.message ?: "Failed to delete submission"
+                )
+            }
+        }
     }
 
     fun showFullScreenImage(url: String) {

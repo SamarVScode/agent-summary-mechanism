@@ -32,6 +32,10 @@ import com.agentflow.tracker.ui.screens.leave.LeaveScreen
 import com.agentflow.tracker.ui.screens.leave.LeaveViewModel
 import com.agentflow.tracker.ui.screens.login.LoginScreen
 import com.agentflow.tracker.ui.screens.login.LoginViewModel
+import com.agentflow.tracker.domain.update.AppUpdateManager
+import com.agentflow.tracker.domain.update.UpdateState
+import com.agentflow.tracker.ui.components.AppUpdateDialog
+import androidx.compose.runtime.LaunchedEffect
 import com.agentflow.tracker.ui.screens.profile.ProfileScreen
 import com.agentflow.tracker.ui.screens.profile.ProfileViewModel
 import com.agentflow.tracker.ui.screens.tracker.TrackerScreen
@@ -42,6 +46,7 @@ import kotlinx.coroutines.launch
 fun AgentFlowNavGraph(
     userPreferences: UserPreferences,
     supabaseService: SupabaseService,
+    appUpdateManager: AppUpdateManager,
     navController: NavHostController = rememberNavController()
 ) {
     val context = LocalContext.current
@@ -70,6 +75,13 @@ fun AgentFlowNavGraph(
 
     val isLoggedIn = agentName.isNotBlank() && casperId.isNotBlank()
     val startDestination = if (isLoggedIn) Screen.Tracker.route else Screen.Login.route
+
+    val updateState by appUpdateManager.updateState.collectAsState()
+
+    // Silently check for updates when app opens
+    LaunchedEffect(Unit) {
+        appUpdateManager.checkForUpdates(manualCheck = false)
+    }
 
     // Leave ViewModel shared for unread notification count
     val leaveViewModel = remember(agentName) {
@@ -163,6 +175,7 @@ fun AgentFlowNavGraph(
                         }
                         ProfileScreen(
                             viewModel = profileViewModel,
+                            appUpdateManager = appUpdateManager,
                             onLogout = {
                                 scope.launch {
                                     userPreferences.clearAgentInfo()
@@ -177,4 +190,17 @@ fun AgentFlowNavGraph(
             }
         }
     }
+
+    AppUpdateDialog(
+        updateState = updateState,
+        onStartDownload = { url ->
+            scope.launch { appUpdateManager.downloadAndInstall(url) }
+        },
+        onInstall = {
+            if (updateState is UpdateState.ReadyToInstall) {
+                appUpdateManager.triggerInstall((updateState as UpdateState.ReadyToInstall).fileUri)
+            }
+        },
+        onDismiss = appUpdateManager::resetState
+    )
 }

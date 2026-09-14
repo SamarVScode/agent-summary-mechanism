@@ -158,6 +158,27 @@ class SupabaseService {
         }
     }
 
+    suspend fun deleteSubmissionsByDate(agentName: String, date: String): Result<Unit> = withContext(Dispatchers.IO) {
+        try {
+            val encodedName = URLEncoder.encode(agentName, "UTF-8")
+            val encodedDate = URLEncoder.encode(date, "UTF-8")
+            val url = "$baseUrl/rest/v1/submissions?agent_name=eq.$encodedName&date=eq.$encodedDate"
+            val request = newRequestBuilder(url)
+                .delete()
+                .build()
+
+            client.newCall(request).execute().use { response ->
+                if (!response.isSuccessful) {
+                    val errText = response.body?.string().orEmpty()
+                    return@withContext Result.failure(IOException("Delete error (${response.code}): $errText"))
+                }
+                Result.success(Unit)
+            }
+        } catch (e: Exception) {
+            Result.failure(e)
+        }
+    }
+
     // ── Leave Requests ──────────────────────────────────────────────────────────
     suspend fun fetchAgentLeaves(agentName: String): Result<List<LeaveRequest>> = withContext(Dispatchers.IO) {
         try {

@@ -35,10 +35,10 @@ jobs:
           sed -i 's/\r$//' ./gradlew
           chmod +x ./gradlew
 
-      - name: Build Debug APK
+      - name: Build Release APK
         run: |
           set -o pipefail
-          ./gradlew assembleDebug --stacktrace --no-daemon 2>&1 | tee build_output.log
+          ./gradlew assembleRelease --stacktrace --no-daemon 2>&1 | tee build_output.log
 
       - name: Upload Build Log Artifact
         if: always()
@@ -47,11 +47,10 @@ jobs:
           name: build-log
           path: agentflow-android/build_output.log
 
-      - name: Upload Debug APK Artifact
+      - name: Upload Release APK Artifact
         if: success()
         uses: actions/upload-artifact@v4
         with:
-          name: AgentFlow-Debug-APK
-          path: agentflow-android/app/build/outputs/apk/debug/*.apk
+          name: AgentFlow-Release-APK
+          path: agentflow-android/app/build/outputs/apk/release/*.apk
           if-no-files-found: error
-

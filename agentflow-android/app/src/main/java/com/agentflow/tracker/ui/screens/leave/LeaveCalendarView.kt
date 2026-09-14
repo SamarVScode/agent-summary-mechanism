@@ -25,6 +25,7 @@ import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.remember
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
@@ -58,26 +59,29 @@ fun LeaveCalendarView(
     val year = calendarMonth.get(Calendar.YEAR)
     val month = calendarMonth.get(Calendar.MONTH)
 
-    // Build days array for current month
-    val cal = (calendarMonth.clone() as Calendar).apply {
-        set(Calendar.DAY_OF_MONTH, 1)
-    }
-    val firstDayOfWeek = cal.get(Calendar.DAY_OF_WEEK) - 1 // 0 for Sunday
-    val daysInMonth = cal.getActualMaximum(Calendar.DAY_OF_MONTH)
+    // Build days array for current month (cached to avoid re-computation on every frame)
+    val daysList = remember(year, month) {
+        val cal = (calendarMonth.clone() as Calendar).apply {
+            set(Calendar.DAY_OF_MONTH, 1)
+        }
+        val firstDayOfWeek = cal.get(Calendar.DAY_OF_WEEK) - 1 // 0 for Sunday
+        val daysInMonth = cal.getActualMaximum(Calendar.DAY_OF_MONTH)
 
-    val daysList = mutableListOf<Date?>()
-    for (i in 0 until firstDayOfWeek) {
-        daysList.add(null)
-    }
-    for (day in 1..daysInMonth) {
-        val d = Calendar.getInstance().apply {
-            set(year, month, day)
-        }.time
-        daysList.add(d)
-    }
-    // Pad trailing days to always complete the final 7-day row
-    while (daysList.size % 7 != 0) {
-        daysList.add(null)
+        val list = mutableListOf<Date?>()
+        for (i in 0 until firstDayOfWeek) {
+            list.add(null)
+        }
+        for (day in 1..daysInMonth) {
+            val d = Calendar.getInstance().apply {
+                set(year, month, day)
+            }.time
+            list.add(d)
+        }
+        // Pad trailing days to always complete the final 7-day row
+        while (list.size % 7 != 0) {
+            list.add(null)
+        }
+        list
     }
 
     Card(

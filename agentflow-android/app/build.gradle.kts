@@ -25,14 +25,27 @@ android {
         }
     }
 
+    signingConfigs {
+        create("release") {
+            storeFile = file("agentflow-release.jks")
+            storePassword = "agentflow123"
+            keyAlias = "agentflow"
+            keyPassword = "agentflow123"
+        }
+    }
+
     buildTypes {
         release {
-            isMinifyEnabled = false
+            isMinifyEnabled = true
+            isShrinkResources = true
             proguardFiles(
                 getDefaultProguardFile("proguard-android-optimize.txt"),
                 "proguard-rules.pro"
             )
-            signingConfig = signingConfigs.getByName("debug")
+            signingConfig = signingConfigs.getByName("release")
+        }
+        debug {
+            signingConfig = signingConfigs.getByName("release")
         }
     }
 
@@ -43,6 +56,7 @@ android {
 
     buildFeatures {
         compose = true
+        buildConfig = true
     }
 
     packaging {

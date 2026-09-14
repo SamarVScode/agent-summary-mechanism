@@ -2,6 +2,9 @@ package com.agentflow.tracker.ui.screens.tracker
 
 import android.content.Context
 import android.net.Uri
+import android.graphics.Bitmap
+import android.graphics.BitmapFactory
+import java.io.ByteArrayOutputStream
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import com.agentflow.tracker.data.api.SupabaseService
@@ -108,10 +111,34 @@ class TrackerViewModel(
 
         viewModelScope.launch {
             try {
-                // Read bytes from Uri
+                // Compress & downsample image before upload to avoid memory pressure & GC pauses
                 val bytes = withContext(Dispatchers.IO) {
-                    context.contentResolver.openInputStream(uri)?.use { it.readBytes() }
-                } ?: throw Exception("Failed to read image data")
+                    val stream = context.contentResolver.openInputStream(uri) ?: return@withContext null
+                    val original = BitmapFactory.decodeStream(stream)
+                    stream.close()
+                    if (original == null) return@withContext null
+
+                    val maxDim = 1280
+                    val width = original.width
+                    val height = original.height
+                    val scaled = if (width > maxDim || height > maxDim) {
+                        val ratio = width.toFloat() / height.toFloat()
+                        val (newW, newH) = if (ratio > 1) {
+                            Pair(maxDim, (maxDim / ratio).toInt())
+                        } else {
+                            Pair((maxDim * ratio).toInt(), maxDim)
+                        }
+                        Bitmap.createScaledBitmap(original, newW, newH, true)
+                    } else {
+                        original
+                    }
+
+                    val out = ByteArrayOutputStream()
+                    scaled.compress(Bitmap.CompressFormat.JPEG, 82, out)
+                    if (scaled != original) scaled.recycle()
+                    original.recycle()
+                    out.toByteArray()
+                } ?: throw Exception("Failed to process image data")
 
                 val safeAgent = agentName.trim().replace(Regex("[^a-zA-Z0-9]"), "_")
                 val dateFormatted = _uiState.value.selectedDate

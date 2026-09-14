@@ -23,7 +23,10 @@ import androidx.compose.material.icons.automirrored.filled.ExitToApp
 import androidx.compose.material.icons.filled.ArrowDropDown
 import androidx.compose.material.icons.filled.DarkMode
 import androidx.compose.material.icons.filled.LightMode
+import androidx.compose.material.icons.filled.Settings
 import androidx.compose.material.icons.filled.SettingsBrightness
+import androidx.compose.material3.IconButton
+import com.agentflow.tracker.domain.update.AppUpdateManager
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.vector.ImageVector
 import com.agentflow.tracker.ui.theme.AgentFlowGradient
@@ -56,11 +59,13 @@ import com.agentflow.tracker.ui.theme.SuccessGreen
 @Composable
 fun ProfileScreen(
     viewModel: ProfileViewModel,
+    appUpdateManager: AppUpdateManager,
     onLogout: () -> Unit
 ) {
     val uiState by viewModel.uiState.collectAsState()
     var monthMenuOpen by remember { mutableStateOf(false) }
     var cycleMenuOpen by remember { mutableStateOf(false) }
+    var showSettingsSheet by remember { mutableStateOf(false) }
 
     val displayedEarnings = when (uiState.selectedCycle) {
         "c1" -> uiState.cycleStats.c1Earnings
@@ -88,7 +93,41 @@ fun ProfileScreen(
             .padding(20.dp),
         horizontalAlignment = Alignment.CenterHorizontally
     ) {
-        Spacer(modifier = Modifier.height(10.dp))
+        // Screen Header Row with Title and Settings Button
+        Row(
+            modifier = Modifier
+                .fillMaxWidth()
+                .padding(bottom = 14.dp),
+            horizontalArrangement = Arrangement.SpaceBetween,
+            verticalAlignment = Alignment.CenterVertically
+        ) {
+            Column {
+                Text(
+                    text = "Agent Profile",
+                    style = MaterialTheme.typography.titleLarge,
+                    fontWeight = FontWeight.Bold,
+                    color = MaterialTheme.colorScheme.onSurface
+                )
+                Text(
+                    text = "Payout statistics & settings",
+                    style = MaterialTheme.typography.labelSmall,
+                    color = MaterialTheme.colorScheme.onSurfaceVariant
+                )
+            }
+
+            IconButton(
+                onClick = { showSettingsSheet = true },
+                modifier = Modifier
+                    .clip(CircleShape)
+                    .background(MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.6f))
+            ) {
+                Icon(
+                    imageVector = Icons.Default.Settings,
+                    contentDescription = "Settings",
+                    tint = MaterialTheme.colorScheme.onSurface
+                )
+            }
+        }
 
         // Hero Profile Card
         Card(
@@ -397,6 +436,15 @@ fun ProfileScreen(
 
         Spacer(modifier = Modifier.height(20.dp))
     }
+
+    SettingsBottomSheet(
+        visible = showSettingsSheet,
+        currentTheme = uiState.currentTheme,
+        onThemeChange = viewModel::setTheme,
+        appUpdateManager = appUpdateManager,
+        onLogout = { viewModel.logout(onLogout) },
+        onDismiss = { showSettingsSheet = false }
+    )
 }
 
 @Composable

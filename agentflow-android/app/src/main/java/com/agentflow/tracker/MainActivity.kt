@@ -31,7 +31,8 @@ class MainActivity : ComponentActivity() {
             AgentFlowTheme(darkTheme = isDark) {
                 AgentFlowNavGraph(
                     userPreferences = userPreferences,
-                    supabaseService = supabaseService
+                    supabaseService = supabaseService,
+                    appUpdateManager = app.appUpdateManager
                 )
             }
         }
