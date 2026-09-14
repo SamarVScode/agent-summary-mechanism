@@ -53,14 +53,9 @@ import com.agentflow.tracker.ui.theme.GradientPink
 fun LeaveScreen(viewModel: LeaveViewModel) {
     val uiState by viewModel.uiState.collectAsState()
 
-    // Auto-sync leaves whenever this tab is opened
-    LaunchedEffect(Unit) {
-        viewModel.loadLeaves()
-    }
-
     PullToRefreshBox(
-        isRefreshing = uiState.isLoading,
-        onRefresh = { viewModel.loadLeaves() },
+        isRefreshing = uiState.isRefreshing,
+        onRefresh = { viewModel.refreshLeaves() },
         modifier = Modifier.fillMaxSize()
     ) {
         LazyColumn(
@@ -88,14 +83,6 @@ fun LeaveScreen(viewModel: LeaveViewModel) {
                                 style = MaterialTheme.typography.labelSmall,
                                 color = MaterialTheme.colorScheme.onSurfaceVariant,
                                 modifier = Modifier.padding(top = 2.dp)
-                            )
-                        }
-
-                        IconButton(onClick = { viewModel.loadLeaves() }) {
-                            Icon(
-                                imageVector = Icons.Default.Sync,
-                                contentDescription = "Refresh",
-                                tint = GradientPink
                             )
                         }
                     }
@@ -279,6 +266,7 @@ fun LeaveScreen(viewModel: LeaveViewModel) {
         reason = uiState.reason,
         isEditing = uiState.editingLeaveId != null,
         isSubmitting = uiState.isSubmitting,
+        overlappingAgents = uiState.activeOverlapAgents,
         onDurationChanged = viewModel::onDurationChanged,
         onReasonChanged = viewModel::onReasonChanged,
         onSubmit = viewModel::requestLeaveSubmit,
@@ -286,9 +274,9 @@ fun LeaveScreen(viewModel: LeaveViewModel) {
     )
 
     // Team Overlap Warning Dialog
-    if (uiState.overlappingAgents != null) {
+    if (uiState.overlapDialogAgents != null) {
         TeamOverlapDialog(
-            overlappingAgents = uiState.overlappingAgents!!,
+            overlappingAgents = uiState.overlapDialogAgents!!,
             onConfirm = viewModel::confirmOverlapAndSubmit,
             onDismiss = viewModel::dismissOverlapDialog
         )

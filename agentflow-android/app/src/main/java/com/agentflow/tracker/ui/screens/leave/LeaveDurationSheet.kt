@@ -37,9 +37,12 @@ import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
+import androidx.compose.material.icons.filled.WarningAmber
 import com.agentflow.tracker.ui.components.AgentFlowGradientButton
 import com.agentflow.tracker.ui.theme.PinkLight
 import com.agentflow.tracker.ui.theme.PinkPrimary
+import com.agentflow.tracker.ui.theme.WarningYellow
+import com.agentflow.tracker.ui.theme.WarningYellowLight
 import java.text.SimpleDateFormat
 import java.util.Calendar
 import java.util.Date
@@ -54,6 +57,7 @@ fun LeaveDurationSheet(
     reason: String,
     isEditing: Boolean,
     isSubmitting: Boolean,
+    overlappingAgents: List<String> = emptyList(),
     onDurationChanged: (Int) -> Unit,
     onReasonChanged: (String) -> Unit,
     onSubmit: () -> Unit,
@@ -153,11 +157,47 @@ fun LeaveDurationSheet(
                 }
             }
 
+            if (overlappingAgents.isNotEmpty()) {
+                Spacer(modifier = Modifier.height(14.dp))
+                Box(
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .clip(RoundedCornerShape(12.dp))
+                        .background(WarningYellowLight)
+                        .border(1.dp, WarningYellow.copy(alpha = 0.5f), RoundedCornerShape(12.dp))
+                        .padding(12.dp)
+                ) {
+                    Row(verticalAlignment = Alignment.CenterVertically) {
+                        Icon(
+                            imageVector = Icons.Default.WarningAmber,
+                            contentDescription = null,
+                            tint = WarningYellow,
+                            modifier = Modifier.size(20.dp)
+                        )
+                        Spacer(modifier = Modifier.width(10.dp))
+                        Column {
+                            Text(
+                                text = "Team Member Already on Leave",
+                                fontWeight = FontWeight.Bold,
+                                fontSize = 13.sp,
+                                color = MaterialTheme.colorScheme.onSurface
+                            )
+                            Text(
+                                text = "${overlappingAgents.joinToString(" and ")} already approved for leave during these dates.",
+                                fontSize = 12.sp,
+                                color = MaterialTheme.colorScheme.onSurfaceVariant,
+                                modifier = Modifier.padding(top = 2.dp)
+                            )
+                        }
+                    }
+                }
+            }
+
             Spacer(modifier = Modifier.height(18.dp))
 
-            // Duration Stepper (Minus - Count - Plus)
+            // Duration Stepper (Minus - Count - Plus) capped at 5 days max
             Text(
-                text = "Duration",
+                text = "Duration (Max 5 days)",
                 fontSize = 13.sp,
                 fontWeight = FontWeight.SemiBold,
                 color = MaterialTheme.colorScheme.onSurface
@@ -187,7 +227,8 @@ fun LeaveDurationSheet(
                 )
 
                 FilledIconButton(
-                    onClick = { onDurationChanged(durationDays + 1) },
+                    onClick = { if (durationDays < 5) onDurationChanged(durationDays + 1) },
+                    enabled = durationDays < 5,
                     colors = IconButtonDefaults.filledIconButtonColors(containerColor = MaterialTheme.colorScheme.surfaceVariant)
                 ) {
                     Icon(Icons.Default.Add, contentDescription = "Increase")

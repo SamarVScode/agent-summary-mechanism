@@ -75,20 +75,22 @@ class TrackerViewModel(
                 // 3. Process with ML Kit OCR
                 val ocrResult = ocrExtractor.extractCounts(uri)
                 ocrResult.onSuccess { counts ->
-                    if (counts.totalCount != null && counts.completedCount != null) {
+                    val total = counts.totalCount ?: 0
+                    val completed = counts.completedCount ?: 0
+                    if (total > 0 || completed > 0) {
                         _uiState.value = _uiState.value.copy(
-                            phase = TrackerPhase.Review(counts.totalCount, counts.completedCount)
+                            phase = TrackerPhase.Review(total, completed)
                         )
                     } else {
                         _uiState.value = _uiState.value.copy(
-                            phase = TrackerPhase.Idle,
-                            errorMessage = "Could not read screenshot counts. Please use a clear, well-lit image."
+                            phase = TrackerPhase.Review(0, 0),
+                            errorMessage = "Couldn't auto-detect counts. Please verify and enter numbers manually."
                         )
                     }
                 }.onFailure { error ->
                     _uiState.value = _uiState.value.copy(
-                        phase = TrackerPhase.Idle,
-                        errorMessage = "OCR processing failed: ${error.message}"
+                        phase = TrackerPhase.Review(0, 0),
+                        errorMessage = "OCR couldn't read numbers. Please enter counts manually."
                     )
                 }
             } catch (e: Exception) {

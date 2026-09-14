@@ -50,24 +50,15 @@ import com.agentflow.tracker.ui.theme.PinkLight
 import com.agentflow.tracker.ui.theme.PinkPrimary
 import com.agentflow.tracker.ui.theme.SuccessGreen
 
-import androidx.compose.material.icons.filled.Sync
 import androidx.compose.material3.ExperimentalMaterial3Api
-import androidx.compose.material3.IconButton
 import androidx.compose.material3.pulltorefresh.PullToRefreshBox
-import androidx.compose.runtime.LaunchedEffect
 import com.agentflow.tracker.ui.theme.AgentFlowGradient
-import com.agentflow.tracker.ui.theme.GradientPink
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun DashboardScreen(viewModel: DashboardViewModel) {
     val uiState by viewModel.uiState.collectAsState()
     var monthMenuExpanded by remember { mutableStateOf(false) }
-
-    // Auto-sync every time Dashboard is displayed
-    LaunchedEffect(Unit) {
-        viewModel.loadSubmissions()
-    }
 
     // If detail view is open
     if (uiState.activeDetailSubmission != null) {
@@ -85,8 +76,8 @@ fun DashboardScreen(viewModel: DashboardViewModel) {
     }
 
     PullToRefreshBox(
-        isRefreshing = uiState.isLoading,
-        onRefresh = { viewModel.loadSubmissions() },
+        isRefreshing = uiState.isRefreshing,
+        onRefresh = { viewModel.refreshSubmissions() },
         modifier = Modifier.fillMaxSize()
     ) {
         Column(
@@ -97,7 +88,7 @@ fun DashboardScreen(viewModel: DashboardViewModel) {
         ) {
             Spacer(modifier = Modifier.height(16.dp))
 
-            // Header Row with Title & Month Selector & Sync Button
+            // Header Row with Title & Month Selector
             Row(
                 modifier = Modifier.fillMaxWidth(),
                 horizontalArrangement = Arrangement.SpaceBetween,
@@ -117,23 +108,8 @@ fun DashboardScreen(viewModel: DashboardViewModel) {
                     )
                 }
 
-                Row(verticalAlignment = Alignment.CenterVertically) {
-                    // Manual Sync Icon Button
-                    IconButton(
-                        onClick = { viewModel.loadSubmissions() },
-                        modifier = Modifier.size(38.dp)
-                    ) {
-                        Icon(
-                            imageVector = Icons.Default.Sync,
-                            contentDescription = "Refresh",
-                            tint = GradientPink
-                        )
-                    }
-
-                    Spacer(modifier = Modifier.width(6.dp))
-
-                    // Month Dropdown Box
-                    Box {
+                // Month Dropdown Box
+                Box {
                         Row(
                             modifier = Modifier
                                 .clip(RoundedCornerShape(10.dp))

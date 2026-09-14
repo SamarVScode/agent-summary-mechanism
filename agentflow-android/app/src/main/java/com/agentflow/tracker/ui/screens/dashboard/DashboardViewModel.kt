@@ -14,6 +14,7 @@ import kotlinx.coroutines.launch
 
 data class DashboardUiState(
     val isLoading: Boolean = true,
+    val isRefreshing: Boolean = false,
     val errorMessage: String? = null,
     val selectedMonth: String = DateUtils.getCurrentMonthYear(),
     val selectedCycle: String = "all", // "all", "c1", "c2"
@@ -52,6 +53,24 @@ class DashboardViewModel(
                 _uiState.value = _uiState.value.copy(
                     isLoading = false,
                     errorMessage = error.message ?: "Failed to load history"
+                )
+            }
+        }
+    }
+
+    fun refreshSubmissions() {
+        viewModelScope.launch {
+            _uiState.value = _uiState.value.copy(isRefreshing = true)
+            val result = supabaseService.fetchSubmissions(agentName)
+
+            result.onSuccess { subs ->
+                rawSubmissions = subs
+                processSubmissions()
+                _uiState.value = _uiState.value.copy(isRefreshing = false)
+            }.onFailure { error ->
+                _uiState.value = _uiState.value.copy(
+                    isRefreshing = false,
+                    errorMessage = error.message ?: "Failed to refresh history"
                 )
             }
         }

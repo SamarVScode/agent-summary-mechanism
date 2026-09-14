@@ -21,10 +21,12 @@ class MlKitOcrExtractor(private val context: Context) {
                 recognizer.process(inputImage)
                     .addOnSuccessListener { visionText ->
                         val rawText = visionText.text
+                        android.util.Log.d("AgentFlowOCR", "Raw ML Kit recognized text:\n$rawText")
                         val counts = OcrParser.parseCountsFromOcr(rawText)
                         continuation.resume(counts)
                     }
                     .addOnFailureListener { error ->
+                        android.util.Log.e("AgentFlowOCR", "ML Kit extraction failure", error)
                         continuation.resumeWithException(error)
                     }
             }

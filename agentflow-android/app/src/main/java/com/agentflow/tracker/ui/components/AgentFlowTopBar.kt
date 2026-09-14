@@ -10,10 +10,6 @@ import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.shape.CircleShape
-import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.filled.Sync
-import androidx.compose.material3.Icon
-import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
@@ -32,8 +28,7 @@ import com.agentflow.tracker.ui.theme.AgentFlowGradient
 @Composable
 fun AgentFlowTopBar(
     agentName: String,
-    currentDate: String,
-    onRefresh: (() -> Unit)? = null
+    currentDate: String
 ) {
     val outlineColor = MaterialTheme.colorScheme.outline.copy(alpha = 0.35f)
 
@@ -83,16 +78,6 @@ fun AgentFlowTopBar(
                 style = MaterialTheme.typography.labelSmall,
                 color = MaterialTheme.colorScheme.onSurfaceVariant
             )
-        }
-
-        if (onRefresh != null) {
-            IconButton(onClick = onRefresh) {
-                Icon(
-                    imageVector = Icons.Default.Sync,
-                    contentDescription = "Sync",
-                    tint = MaterialTheme.colorScheme.onSurfaceVariant
-                )
-            }
         }
     }
 }

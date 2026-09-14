@@ -75,6 +75,10 @@ fun LeaveCalendarView(
         }.time
         daysList.add(d)
     }
+    // Pad trailing days to always complete the final 7-day row
+    while (daysList.size % 7 != 0) {
+        daysList.add(null)
+    }
 
     Card(
         modifier = Modifier.fillMaxWidth(),

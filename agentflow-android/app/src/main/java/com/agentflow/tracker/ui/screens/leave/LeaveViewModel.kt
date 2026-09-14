@@ -15,6 +15,7 @@ import java.util.Locale
 
 data class LeaveUiState(
     val isLoading: Boolean = true,
+    val isRefreshing: Boolean = false,
     val isCheckingOverlap: Boolean = false,
     val isSubmitting: Boolean = false,
     val errorMessage: String? = null,
@@ -26,7 +27,8 @@ data class LeaveUiState(
     val durationDays: Int = 1,
     val reason: String = "",
     val editingLeaveId: String? = null,
-    val overlappingAgents: List<String>? = null,
+    val activeOverlapAgents: List<String> = emptyList(),
+    val overlapDialogAgents: List<String>? = null,
     val hasUnreadLeaves: Boolean = false
 )
 
@@ -73,6 +75,25 @@ class LeaveViewModel(
         }
     }
 
+    fun refreshLeaves() {
+        viewModelScope.launch {
+            _uiState.value = _uiState.value.copy(isRefreshing = true)
+            val agentRes = supabaseService.fetchAgentLeaves(agentName)
+            val teamRes = supabaseService.fetchApprovedTeamLeaves()
+
+            if (agentRes.isSuccess && teamRes.isSuccess) {
+                val leaves = agentRes.getOrThrow()
+                _uiState.value = _uiState.value.copy(
+                    isRefreshing = false,
+                    userLeaves = leaves,
+                    approvedTeamLeaves = teamRes.getOrThrow()
+                )
+            } else {
+                _uiState.value = _uiState.value.copy(isRefreshing = false)
+            }
+        }
+    }
+
     fun checkUnreadNotifications() {
         viewModelScope.launch {
             val res = supabaseService.checkUnreadLeaves(agentName)
@@ -96,13 +117,39 @@ class LeaveViewModel(
         _uiState.value = _uiState.value.copy(calendarMonth = cal)
     }
 
+    fun getOverlappingApprovedAgents(startStr: String, duration: Int): List<String> {
+        if (startStr.isBlank()) return emptyList()
+        return try {
+            val startCal = Calendar.getInstance().apply {
+                time = isoFormat.parse(startStr) ?: Date()
+            }
+            val endCal = (startCal.clone() as Calendar).apply {
+                add(Calendar.DAY_OF_MONTH, duration - 1)
+            }
+            val endStr = isoFormat.format(endCal.time)
+
+            _uiState.value.approvedTeamLeaves
+                .filter {
+                    it.status.equals("approved", ignoreCase = true) &&
+                    !it.agentName.trim().equals(agentName.trim(), ignoreCase = true) &&
+                    it.startDate <= endStr && it.endDate >= startStr
+                }
+                .map { it.agentName }
+                .distinct()
+        } catch (e: Exception) {
+            emptyList()
+        }
+    }
+
     fun onDateClicked(date: Date) {
         val dateStr = isoFormat.format(date)
+        val overlaps = getOverlappingApprovedAgents(dateStr, 1)
         _uiState.value = _uiState.value.copy(
             selectedStartDate = dateStr,
             durationDays = 1,
             reason = "",
             editingLeaveId = null,
+            activeOverlapAgents = overlaps,
             showDurationSheet = true
         )
     }
@@ -112,13 +159,15 @@ class LeaveViewModel(
             val start = isoFormat.parse(leave.startDate)
             val end = isoFormat.parse(leave.endDate)
             val diffTime = (end?.time ?: 0) - (start?.time ?: 0)
-            val days = (diffTime / (1000 * 60 * 60 * 24)).toInt() + 1
+            val days = ((diffTime / (1000 * 60 * 60 * 24)).toInt() + 1).coerceIn(1, 5)
+            val overlaps = getOverlappingApprovedAgents(leave.startDate, days)
 
             _uiState.value = _uiState.value.copy(
                 selectedStartDate = leave.startDate,
-                durationDays = days.coerceAtLeast(1),
+                durationDays = days,
                 reason = leave.reason,
                 editingLeaveId = leave.id,
+                activeOverlapAgents = overlaps,
                 showDurationSheet = true
             )
         } catch (e: Exception) {
@@ -127,11 +176,16 @@ class LeaveViewModel(
     }
 
     fun dismissDurationSheet() {
-        _uiState.value = _uiState.value.copy(showDurationSheet = false, editingLeaveId = null)
+        _uiState.value = _uiState.value.copy(showDurationSheet = false, editingLeaveId = null, activeOverlapAgents = emptyList())
     }
 
     fun onDurationChanged(days: Int) {
-        _uiState.value = _uiState.value.copy(durationDays = days.coerceAtLeast(1))
+        val cappedDays = days.coerceIn(1, 5)
+        val overlaps = getOverlappingApprovedAgents(_uiState.value.selectedStartDate, cappedDays)
+        _uiState.value = _uiState.value.copy(
+            durationDays = cappedDays,
+            activeOverlapAgents = overlaps
+        )
     }
 
     fun onReasonChanged(reason: String) {
@@ -162,7 +216,7 @@ class LeaveViewModel(
 
             overlapRes.onSuccess { overlappingAgents ->
                 if (overlappingAgents.isNotEmpty()) {
-                    _uiState.value = _uiState.value.copy(overlappingAgents = overlappingAgents)
+                    _uiState.value = _uiState.value.copy(overlapDialogAgents = overlappingAgents)
                 } else {
                     executeSubmit(startStr, endStr)
                 }
@@ -184,12 +238,12 @@ class LeaveViewModel(
         }
         val endStr = isoFormat.format(endCal.time)
 
-        _uiState.value = _uiState.value.copy(overlappingAgents = null)
+        _uiState.value = _uiState.value.copy(overlapDialogAgents = null)
         executeSubmit(startStr, endStr)
     }
 
     fun dismissOverlapDialog() {
-        _uiState.value = _uiState.value.copy(overlappingAgents = null)
+        _uiState.value = _uiState.value.copy(overlapDialogAgents = null)
     }
 
     private fun executeSubmit(startDate: String, endDate: String) {
