@@ -1,8 +1,10 @@
 package com.agentflow.tracker.ui.navigation
 
+import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.padding
+import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Scaffold
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.collectAsState
@@ -45,9 +47,23 @@ fun AgentFlowNavGraph(
     val context = LocalContext.current
     val scope = rememberCoroutineScope()
 
-    val agentName by userPreferences.agentNameFlow.collectAsState(initial = "")
-    val casperId by userPreferences.casperIdFlow.collectAsState(initial = "")
-    val rateAmount by userPreferences.rateAmountFlow.collectAsState(initial = 13.0)
+    val agentNamePref by userPreferences.agentNameFlow.collectAsState(initial = null)
+    val casperIdPref by userPreferences.casperIdFlow.collectAsState(initial = null)
+    val rateAmountPref by userPreferences.rateAmountFlow.collectAsState(initial = null)
+
+    // Await preferences from disk to eliminate momentary flash of login screen on startup
+    if (agentNamePref == null || casperIdPref == null) {
+        Box(
+            modifier = Modifier
+                .fillMaxSize()
+                .background(MaterialTheme.colorScheme.background)
+        )
+        return
+    }
+
+    val agentName = agentNamePref ?: ""
+    val casperId = casperIdPref ?: ""
+    val rateAmount = rateAmountPref ?: 13.0
 
     val navBackStackEntry by navController.currentBackStackEntryAsState()
     val currentRoute = navBackStackEntry?.destination?.route ?: Screen.Tracker.route
@@ -78,15 +94,7 @@ fun AgentFlowNavGraph(
             topBar = {
                 AgentFlowTopBar(
                     agentName = agentName,
-                    currentDate = DateUtils.formatDate(),
-                    onLogout = {
-                        scope.launch {
-                            userPreferences.clearAgentInfo()
-                            navController.navigate(Screen.Login.route) {
-                                popUpTo(0) { inclusive = true }
-                            }
-                        }
-                    }
+                    currentDate = DateUtils.formatDate()
                 )
             },
             bottomBar = {

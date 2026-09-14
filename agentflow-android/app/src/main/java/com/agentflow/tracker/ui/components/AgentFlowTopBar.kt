@@ -11,7 +11,6 @@ import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.automirrored.filled.ExitToApp
 import androidx.compose.material.icons.filled.Sync
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
@@ -34,7 +33,6 @@ import com.agentflow.tracker.ui.theme.AgentFlowGradient
 fun AgentFlowTopBar(
     agentName: String,
     currentDate: String,
-    onLogout: () -> Unit,
     onRefresh: (() -> Unit)? = null
 ) {
     val outlineColor = MaterialTheme.colorScheme.outline.copy(alpha = 0.35f)
@@ -95,14 +93,6 @@ fun AgentFlowTopBar(
                     tint = MaterialTheme.colorScheme.onSurfaceVariant
                 )
             }
-        }
-
-        IconButton(onClick = onLogout) {
-            Icon(
-                imageVector = Icons.AutoMirrored.Filled.ExitToApp,
-                contentDescription = "Logout",
-                tint = MaterialTheme.colorScheme.onSurfaceVariant
-            )
         }
     }
 }
