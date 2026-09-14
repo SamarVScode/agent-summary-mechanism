@@ -58,13 +58,12 @@ fun LeaveScreen(viewModel: LeaveViewModel) {
         viewModel.loadLeaves()
     }
 
-    Box(modifier = Modifier.fillMaxSize()) {
-        PullToRefreshBox(
-            isRefreshing = uiState.isLoading,
-            onRefresh = { viewModel.loadLeaves() },
-            modifier = Modifier.fillMaxSize()
-        ) {
-            LazyColumn(
+    PullToRefreshBox(
+        isRefreshing = uiState.isLoading,
+        onRefresh = { viewModel.loadLeaves() },
+        modifier = Modifier.fillMaxSize()
+    ) {
+        LazyColumn(
                 modifier = Modifier
                     .fillMaxSize()
                     .background(MaterialTheme.colorScheme.background)
