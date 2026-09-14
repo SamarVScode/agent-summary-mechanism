@@ -173,149 +173,155 @@ fun DashboardScreen(viewModel: DashboardViewModel) {
                     }
                 }
             }
-        }
 
-        Spacer(modifier = Modifier.height(14.dp))
+            Spacer(modifier = Modifier.height(14.dp))
 
-        // Cycle Filter Pills Row
-        Row(
-            modifier = Modifier
-                .fillMaxWidth()
-                .horizontalScroll(rememberScrollState()),
-            horizontalArrangement = Arrangement.spacedBy(8.dp)
-        ) {
-            CyclePill(
-                label = "All Month",
-                count = uiState.cycleCounts["all"] ?: 0,
-                selected = uiState.selectedCycle == "all",
-                onClick = { viewModel.selectCycle("all") }
-            )
-            CyclePill(
-                label = "Cycle 1 (1–15)",
-                count = uiState.cycleCounts["c1"] ?: 0,
-                selected = uiState.selectedCycle == "c1",
-                onClick = { viewModel.selectCycle("c1") }
-            )
-            CyclePill(
-                label = "Cycle 2 (16–End)",
-                count = uiState.cycleCounts["c2"] ?: 0,
-                selected = uiState.selectedCycle == "c2",
-                onClick = { viewModel.selectCycle("c2") }
-            )
-        }
-
-        Spacer(modifier = Modifier.height(16.dp))
-
-        // Content Area
-        if (uiState.isLoading) {
-            Box(
-                modifier = Modifier.fillMaxSize(),
-                contentAlignment = Alignment.Center
+            // Cycle Filter Pills Row
+            Row(
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .horizontalScroll(rememberScrollState()),
+                horizontalArrangement = Arrangement.spacedBy(8.dp)
             ) {
-                CircularProgressIndicator(color = PinkPrimary)
+                CyclePill(
+                    label = "All Month",
+                    count = uiState.cycleCounts["all"] ?: 0,
+                    selected = uiState.selectedCycle == "all",
+                    onClick = { viewModel.selectCycle("all") }
+                )
+                CyclePill(
+                    label = "Cycle 1 (1–15)",
+                    count = uiState.cycleCounts["c1"] ?: 0,
+                    selected = uiState.selectedCycle == "c1",
+                    onClick = { viewModel.selectCycle("c1") }
+                )
+                CyclePill(
+                    label = "Cycle 2 (16–End)",
+                    count = uiState.cycleCounts["c2"] ?: 0,
+                    selected = uiState.selectedCycle == "c2",
+                    onClick = { viewModel.selectCycle("c2") }
+                )
             }
-        } else if (uiState.filteredSubmissions.isEmpty()) {
-            Box(
-                modifier = Modifier.fillMaxSize(),
-                contentAlignment = Alignment.Center
-            ) {
-                Column(horizontalAlignment = Alignment.CenterHorizontally) {
-                    Icon(
-                        imageVector = Icons.Default.Inbox,
-                        contentDescription = "Empty",
-                        tint = MaterialTheme.colorScheme.onSurfaceVariant,
-                        modifier = Modifier.size(48.dp)
-                    )
-                    Spacer(modifier = Modifier.height(12.dp))
-                    Text(
-                        text = "No entries found",
-                        fontWeight = FontWeight.Bold,
-                        fontSize = 16.sp,
-                        color = MaterialTheme.colorScheme.onSurface
-                    )
-                    Text(
-                        text = "No summaries recorded for this cycle.",
-                        fontSize = 13.sp,
-                        color = MaterialTheme.colorScheme.onSurfaceVariant,
-                        modifier = Modifier.padding(top = 4.dp)
-                    )
+
+            Spacer(modifier = Modifier.height(16.dp))
+
+            // Content Area
+            if (uiState.isLoading) {
+                Box(
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .weight(1f),
+                    contentAlignment = Alignment.Center
+                ) {
+                    CircularProgressIndicator(color = PinkPrimary)
                 }
-            }
-        } else {
-            LazyColumn(
-                modifier = Modifier.fillMaxSize(),
-                verticalArrangement = Arrangement.spacedBy(12.dp)
-            ) {
-                items(uiState.filteredSubmissions) { sub ->
-                    val earned = (sub.completedCount * viewModel.rateAmount).toInt()
+            } else if (uiState.filteredSubmissions.isEmpty()) {
+                Box(
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .weight(1f),
+                    contentAlignment = Alignment.Center
+                ) {
+                    Column(horizontalAlignment = Alignment.CenterHorizontally) {
+                        Icon(
+                            imageVector = Icons.Default.Inbox,
+                            contentDescription = "Empty",
+                            tint = MaterialTheme.colorScheme.onSurfaceVariant,
+                            modifier = Modifier.size(48.dp)
+                        )
+                        Spacer(modifier = Modifier.height(12.dp))
+                        Text(
+                            text = "No entries found",
+                            fontWeight = FontWeight.Bold,
+                            fontSize = 16.sp,
+                            color = MaterialTheme.colorScheme.onSurface
+                        )
+                        Text(
+                            text = "No summaries recorded for this cycle.",
+                            fontSize = 13.sp,
+                            color = MaterialTheme.colorScheme.onSurfaceVariant,
+                            modifier = Modifier.padding(top = 4.dp)
+                        )
+                    }
+                }
+            } else {
+                LazyColumn(
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .weight(1f),
+                    verticalArrangement = Arrangement.spacedBy(12.dp)
+                ) {
+                    items(uiState.filteredSubmissions) { sub ->
+                        val earned = (sub.completedCount * viewModel.rateAmount).toInt()
 
-                    Card(
-                        modifier = Modifier
-                            .fillMaxWidth()
-                            .clickable { viewModel.openDetail(sub) },
-                        shape = RoundedCornerShape(16.dp),
-                        colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surface),
-                        elevation = CardDefaults.cardElevation(defaultElevation = 2.dp)
-                    ) {
-                        Column(modifier = Modifier.padding(16.dp)) {
-                            // Date and Earned Row
-                            Row(
-                                modifier = Modifier.fillMaxWidth(),
-                                horizontalArrangement = Arrangement.SpaceBetween,
-                                verticalAlignment = Alignment.CenterVertically
-                            ) {
-                                Box(
-                                    modifier = Modifier
-                                        .clip(RoundedCornerShape(8.dp))
-                                        .background(PinkLight)
-                                        .padding(horizontal = 10.dp, vertical = 4.dp)
+                        Card(
+                            modifier = Modifier
+                                .fillMaxWidth()
+                                .clickable { viewModel.openDetail(sub) },
+                            shape = RoundedCornerShape(16.dp),
+                            colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surface),
+                            elevation = CardDefaults.cardElevation(defaultElevation = 2.dp)
+                        ) {
+                            Column(modifier = Modifier.padding(16.dp)) {
+                                // Date and Earned Row
+                                Row(
+                                    modifier = Modifier.fillMaxWidth(),
+                                    horizontalArrangement = Arrangement.SpaceBetween,
+                                    verticalAlignment = Alignment.CenterVertically
                                 ) {
-                                    Text(
-                                        text = sub.date,
-                                        fontSize = 13.sp,
-                                        fontWeight = FontWeight.Bold,
-                                        color = PinkPrimary
-                                    )
+                                    Box(
+                                        modifier = Modifier
+                                            .clip(RoundedCornerShape(8.dp))
+                                            .background(PinkLight)
+                                            .padding(horizontal = 10.dp, vertical = 4.dp)
+                                    ) {
+                                        Text(
+                                            text = sub.date,
+                                            fontSize = 13.sp,
+                                            fontWeight = FontWeight.Bold,
+                                            color = PinkPrimary
+                                        )
+                                    }
+
+                                    Row(verticalAlignment = Alignment.CenterVertically) {
+                                        Text(
+                                            text = "Earned  ",
+                                            fontSize = 12.sp,
+                                            color = MaterialTheme.colorScheme.onSurfaceVariant
+                                        )
+                                        Text(
+                                            text = "₹$earned",
+                                            fontSize = 15.sp,
+                                            fontWeight = FontWeight.Bold,
+                                            color = SuccessGreen
+                                        )
+                                    }
                                 }
 
-                                Row(verticalAlignment = Alignment.CenterVertically) {
-                                    Text(
-                                        text = "Earned  ",
-                                        fontSize = 12.sp,
-                                        color = MaterialTheme.colorScheme.onSurfaceVariant
+                                Spacer(modifier = Modifier.height(14.dp))
+
+                                Row(
+                                    modifier = Modifier.fillMaxWidth(),
+                                    horizontalArrangement = Arrangement.spacedBy(10.dp)
+                                ) {
+                                    MetricBox(
+                                        label = "Total Tally (OFD+OFP)",
+                                        value = sub.totalCount.toString(),
+                                        modifier = Modifier.weight(1f)
                                     )
-                                    Text(
-                                        text = "₹$earned",
-                                        fontSize = 15.sp,
-                                        fontWeight = FontWeight.Bold,
-                                        color = SuccessGreen
+                                    MetricBox(
+                                        label = "Completed",
+                                        value = sub.completedCount.toString(),
+                                        modifier = Modifier.weight(1f),
+                                        isSuccess = true
                                     )
                                 }
-                            }
-
-                            Spacer(modifier = Modifier.height(14.dp))
-
-                            Row(
-                                modifier = Modifier.fillMaxWidth(),
-                                horizontalArrangement = Arrangement.spacedBy(10.dp)
-                            ) {
-                                MetricBox(
-                                    label = "Total Tally (OFD+OFP)",
-                                    value = sub.totalCount.toString(),
-                                    modifier = Modifier.weight(1f)
-                                )
-                                MetricBox(
-                                    label = "Completed",
-                                    value = sub.completedCount.toString(),
-                                    modifier = Modifier.weight(1f),
-                                    isSuccess = true
-                                )
                             }
                         }
                     }
-                }
-                item {
-                    Spacer(modifier = Modifier.height(20.dp))
+                    item {
+                        Spacer(modifier = Modifier.height(20.dp))
+                    }
                 }
             }
         }

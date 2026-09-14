@@ -15,6 +15,10 @@
         android:supportsRtl="true"
         android:theme="@style/Theme.AgentFlow">
         
+        <meta-data
+            android:name="com.google.mlkit.vision.DEPENDENCIES"
+            android:value="ocr" />
+
         <activity
             android:name=".MainActivity"
             android:exported="true"

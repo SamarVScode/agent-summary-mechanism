@@ -19,7 +19,7 @@ data class ProfileUiState(
     val cycleStats: CycleStats = CycleStats(0.0, 0, 0.0, 0, 0.0, 0),
     val allTimeCompleted: Int = 0,
     val allTimeEarnings: Double = 0.0,
-    val currentTheme: String = "light"
+    val currentTheme: String = "system"
 )
 
 class ProfileViewModel(
@@ -89,11 +89,15 @@ class ProfileViewModel(
         _uiState.value = _uiState.value.copy(selectedCycle = cycle)
     }
 
+    fun setTheme(theme: String) {
+        viewModelScope.launch {
+            userPreferences.setTheme(theme)
+        }
+    }
+
     fun toggleTheme() {
         val next = if (_uiState.value.currentTheme == "dark") "light" else "dark"
-        viewModelScope.launch {
-            userPreferences.setTheme(next)
-        }
+        setTheme(next)
     }
 
     fun logout(onLoggedOut: () -> Unit) {

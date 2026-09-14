@@ -27,6 +27,7 @@ import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
+import androidx.compose.foundation.layout.statusBarsPadding
 import com.agentflow.tracker.ui.theme.AgentFlowGradient
 
 @Composable
@@ -41,6 +42,8 @@ fun AgentFlowTopBar(
     Row(
         modifier = Modifier
             .fillMaxWidth()
+            .background(MaterialTheme.colorScheme.surface)
+            .statusBarsPadding()
             .drawBehind {
                 drawLine(
                     color = outlineColor,
@@ -49,7 +52,6 @@ fun AgentFlowTopBar(
                     strokeWidth = 1.dp.toPx()
                 )
             }
-            .background(MaterialTheme.colorScheme.surface)
             .padding(horizontal = 20.dp, vertical = 12.dp),
         verticalAlignment = Alignment.CenterVertically
     ) {
