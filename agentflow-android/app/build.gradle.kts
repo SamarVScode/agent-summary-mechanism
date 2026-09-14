@@ -38,10 +38,6 @@ android {
         targetCompatibility = JavaVersion.VERSION_17
     }
 
-    kotlinOptions {
-        jvmTarget = "17"
-    }
-
     buildFeatures {
         compose = true
     }
@@ -87,4 +83,8 @@ dependencies {
 
     // Tooling
     debugImplementation(libs.androidx.ui.tooling)
+}
+
+kotlin {
+    jvmToolchain(17)
 }
