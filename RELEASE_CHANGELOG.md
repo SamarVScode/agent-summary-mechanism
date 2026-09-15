@@ -1,22 +1,15 @@
-### What's New in AgentFlow v1.0.4
+### What's New in AgentFlow v1.0.5
 
-* **Offline-First SQLite Caching**:
-  * Submit daily runsheets and view past work logs seamlessly without requiring an active internet connection.
-  * Local caching ensures instant screen loads and reliable data access anywhere.
+* **Cross-Device Metadata Date Normalization**:
+  * Normalized screenshot capture timestamps across all OEM camera formats (`yyyy:MM:dd`, `yyyy-MM-dd`, `dd-MM-yyyy`, ISO-8601, and epoch seconds/milliseconds).
+  * Capture dates are mapped to the canonical `dd-MMM-yyyy` format (e.g., `15-Sep-2026`) ensuring flawless matching with the app's date picker.
 
-* **Background Sync via WorkManager**:
-  * Pending offline runsheets and screenshots are automatically synced to Supabase when network connectivity returns.
-  * Automatic retry handling and cleanup of temporary local image files upon successful sync.
+* **Offline Profile Earnings Calculation**:
+  * Profile cycle and all-time earnings now calculate directly from the local SQLite database (`submissions_cache`).
+  * Total earnings accurately reflect all completed work when offline (no longer displays ₹0).
+  * Automatically reacts to new runsheet submissions and background sync updates.
 
-* **Strict Metadata Date Validation**:
-  * Screenshot capture dates are strictly validated directly from system `MediaStore` and binary `ExifInterface` headers (eliminating unreliable filename guessing).
-  * Enforces date matching: only same-day screenshots can be submitted for the selected date.
-
-* **Network-Aware UI & Real-Time Sync Indicators**:
-  * Prominent pending sync banner on Dashboard: *"X runsheet(s) waiting to sync — Connect to internet to sync"*.
-  * Distinct "Waiting to sync" status badges on pending submission cards.
-  * Pull-to-refresh displays an instant *"No internet connection"* Toast when offline.
-  * Clear, user-friendly *"Please connect to the internet to check for updates"* prompt instead of raw DNS/host errors.
-
-* **Battery & Data Optimization**:
-  * Replaced continuous timer-based network polling with reactive local database triggers and smart on-demand refreshes.
+* **Instant, Spinner-Free Menu Switching**:
+  * Scoped ViewModels at the graph level to eliminate re-initialization delays when navigating between bottom tabs.
+  * Silenced background network sync so pull-to-refresh indicators only appear when physically swiping down.
+  * Smooth, instantaneous transitions between History, Log Work, Leave, and Profile.

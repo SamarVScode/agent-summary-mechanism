@@ -68,7 +68,7 @@ class TrackerViewModel(
             try {
                 // 1. Strict Metadata Date Validation (real EXIF & MediaStore DATE_TAKEN only)
                 val metadataDate = ImageMetadataUtils.extractCaptureDate(context, uri)
-                if (!metadataDate.isNullOrBlank() && metadataDate != _uiState.value.selectedDate) {
+                if (!metadataDate.isNullOrBlank() && !metadataDate.equals(_uiState.value.selectedDate, ignoreCase = true)) {
                     _uiState.value = _uiState.value.copy(
                         phase = TrackerPhase.Idle,
                         errorMessage = "Date Mismatch: This screenshot was taken on $metadataDate, but you selected ${_uiState.value.selectedDate}. Please select $metadataDate in the date picker to upload this runsheet."

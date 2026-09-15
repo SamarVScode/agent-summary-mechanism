@@ -8,7 +8,7 @@ This document serves as the permanent reference for **AgentFlow**, documenting k
 
 - **Application Name**: AgentFlow
 - **Package ID**: `com.agentflow.tracker`
-- **Current Version**: `1.0.4` (versionCode: `5`)
+- **Current Version**: `1.0.5` (versionCode: `6`)
 - **Tech Stack**: Kotlin 2.0.20, Jetpack Compose, Material 3, Coroutines/Flow, SQLite (`SQLiteOpenHelper`), AndroidX WorkManager, AndroidX ExifInterface, Supabase (PostgreSQL + Auth + Storage), Google ML Kit (on-device OCR), Coil (image loading), OkHttp3.
 - **GitHub Repository**: [`SamarVScode/agent-summary-mechanism`](https://github.com/SamarVScode/agent-summary-mechanism) (branch: `main`).
 - **Development Standards**: Strictly adhere to [`APP_DEVELOPMENT_RULES.md`](file:///C:/Users/User/Desktop/payout%20app/APP_DEVELOPMENT_RULES.md) for CI/CD, signing, offline architecture, and validation guidelines.

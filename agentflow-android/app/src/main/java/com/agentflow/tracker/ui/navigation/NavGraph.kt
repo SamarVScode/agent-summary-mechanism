@@ -84,11 +84,26 @@ fun AgentFlowNavGraph(
         appUpdateManager.checkForUpdates(manualCheck = false)
     }
 
-    // Leave ViewModel shared for unread notification count
+    // ViewModels scoped to authenticated session for instantaneous tab switching without spinners
     val leaveViewModel = remember(agentName) {
         LeaveViewModel(supabaseService, agentName)
     }
     val leaveUiState by leaveViewModel.uiState.collectAsState()
+
+    val dashboardViewModel = remember(agentName, casperId, rateAmount) {
+        DashboardViewModel(context, supabaseService, agentName, casperId, rateAmount)
+    }
+
+    val profileViewModel = remember(agentName, casperId, rateAmount) {
+        ProfileViewModel(
+            context = context,
+            supabaseService = supabaseService,
+            userPreferences = userPreferences,
+            agentName = agentName,
+            casperId = casperId,
+            rateAmount = rateAmount
+        )
+    }
 
     val isAuthRoute = currentRoute == Screen.Login.route
 
@@ -143,9 +158,6 @@ fun AgentFlowNavGraph(
                 }
 
                 composable(Screen.Dashboard.route) {
-                    val dashboardViewModel = remember(agentName, casperId, rateAmount) {
-                        DashboardViewModel(context, supabaseService, agentName, casperId, rateAmount)
-                    }
                     DashboardScreen(viewModel = dashboardViewModel)
                 }
 
@@ -172,15 +184,6 @@ fun AgentFlowNavGraph(
                 }
 
                 composable(Screen.Profile.route) {
-                    val profileViewModel = remember(agentName, casperId, rateAmount) {
-                        ProfileViewModel(
-                            supabaseService = supabaseService,
-                            userPreferences = userPreferences,
-                            agentName = agentName,
-                            casperId = casperId,
-                            rateAmount = rateAmount
-                        )
-                    }
                     ProfileScreen(
                         viewModel = profileViewModel,
                         appUpdateManager = appUpdateManager,

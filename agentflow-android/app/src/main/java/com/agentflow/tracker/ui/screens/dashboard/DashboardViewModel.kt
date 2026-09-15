@@ -82,12 +82,14 @@ class DashboardViewModel(
             return
         }
 
-        refreshRemote()
+        refreshRemote(showSpinner = true)
     }
 
-    private fun refreshRemote() {
+    private fun refreshRemote(showSpinner: Boolean = false) {
         viewModelScope.launch {
-            _uiState.value = _uiState.value.copy(isRefreshing = true, errorMessage = null)
+            if (showSpinner) {
+                _uiState.value = _uiState.value.copy(isRefreshing = true, errorMessage = null)
+            }
 
             // Trigger sync for any pending items
             SyncSubmissionsWorker.enqueue(context)
@@ -96,12 +98,16 @@ class DashboardViewModel(
             result.onSuccess { remoteSubs ->
                 // Sync remote into local DB (won't overwrite pending items)
                 dbHelper.syncFromRemote(remoteSubs, casperId)
-                _uiState.value = _uiState.value.copy(isRefreshing = false)
+                if (showSpinner) {
+                    _uiState.value = _uiState.value.copy(isRefreshing = false)
+                }
             }.onFailure { error ->
-                _uiState.value = _uiState.value.copy(
-                    isRefreshing = false,
-                    errorMessage = if (NetworkUtils.isOnline(context)) (error.message ?: "Failed to refresh history") else null
-                )
+                if (showSpinner) {
+                    _uiState.value = _uiState.value.copy(
+                        isRefreshing = false,
+                        errorMessage = if (NetworkUtils.isOnline(context)) (error.message ?: "Failed to refresh history") else null
+                    )
+                }
             }
         }
     }
