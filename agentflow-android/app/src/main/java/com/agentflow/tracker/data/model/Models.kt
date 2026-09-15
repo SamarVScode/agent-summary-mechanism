@@ -41,14 +41,16 @@ data class ScreenshotItem(
     val url: String,
     val createdAt: String?,
     val totalCount: Int,
-    val completedCount: Int
+    val completedCount: Int,
+    val syncStatus: String = "SYNCED"
 )
 
 data class GroupedDailySubmission(
     val date: String,
     val totalCount: Int,
     val completedCount: Int,
-    val screenshots: List<ScreenshotItem>
+    val screenshots: List<ScreenshotItem>,
+    val hasPendingSync: Boolean = false
 )
 
 data class CycleStats(

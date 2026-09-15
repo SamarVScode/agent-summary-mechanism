@@ -1,12 +1,16 @@
 package com.agentflow.tracker.ui.screens.dashboard
 
+import android.content.Context
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import com.agentflow.tracker.data.api.SupabaseService
+import com.agentflow.tracker.data.local.LocalSubmission
+import com.agentflow.tracker.data.local.LocalSubmissionsDbHelper
 import com.agentflow.tracker.data.model.GroupedDailySubmission
 import com.agentflow.tracker.data.model.ScreenshotItem
-import com.agentflow.tracker.data.model.Submission
 import com.agentflow.tracker.domain.date.DateUtils
+import com.agentflow.tracker.domain.sync.SyncSubmissionsWorker
+import com.agentflow.tracker.domain.utils.NetworkUtils
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
@@ -14,9 +18,11 @@ import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.launch
 
 data class DashboardUiState(
-    val isLoading: Boolean = true,
+    val isLoading: Boolean = false,
     val isRefreshing: Boolean = false,
     val errorMessage: String? = null,
+    val offlineToastMessage: String? = null,
+    val pendingSyncCount: Int = 0,
     val selectedMonth: String = DateUtils.getCurrentMonthYear(),
     val selectedCycle: String = "all", // "all", "c1", "c2"
     val availableMonths: List<String> = listOf(DateUtils.getCurrentMonthYear()),
@@ -28,53 +34,80 @@ data class DashboardUiState(
 )
 
 class DashboardViewModel(
+    private val context: Context,
     private val supabaseService: SupabaseService,
     private val agentName: String,
+    private val casperId: String,
     val rateAmount: Double
 ) : ViewModel() {
+
+    private val dbHelper = LocalSubmissionsDbHelper.getInstance(context)
 
     private val _uiState = MutableStateFlow(DashboardUiState())
     val uiState: StateFlow<DashboardUiState> = _uiState.asStateFlow()
 
-    private var rawSubmissions: List<Submission> = emptyList()
+    private var rawSubmissions: List<LocalSubmission> = emptyList()
 
     init {
-        loadSubmissions()
+        // 1. Instantly load from local database (offline-first, zero delay)
+        loadFromLocalDatabase()
+
+        // 2. React to any local database changes (inserts, sync updates from WorkManager)
+        viewModelScope.launch {
+            dbHelper.dbUpdateTrigger.collect {
+                loadFromLocalDatabase()
+            }
+        }
+
+        // 3. If online, sync pending items and fetch latest from Supabase
+        if (NetworkUtils.isOnline(context)) {
+            refreshRemote()
+        }
     }
 
-    fun loadSubmissions() {
-        viewModelScope.launch {
-            _uiState.value = _uiState.value.copy(isLoading = true, errorMessage = null)
-            val result = supabaseService.fetchSubmissions(agentName)
-
-            result.onSuccess { subs ->
-                rawSubmissions = subs
-                processSubmissions()
-            }.onFailure { error ->
-                _uiState.value = _uiState.value.copy(
-                    isLoading = false,
-                    errorMessage = error.message ?: "Failed to load history"
-                )
-            }
+    private fun loadFromLocalDatabase() {
+        viewModelScope.launch(Dispatchers.IO) {
+            val localSubs = dbHelper.getAllSubmissions(casperId)
+            rawSubmissions = localSubs
+            processSubmissions()
         }
     }
 
     fun refreshSubmissions() {
-        viewModelScope.launch {
-            _uiState.value = _uiState.value.copy(isRefreshing = true)
-            val result = supabaseService.fetchSubmissions(agentName)
+        if (!NetworkUtils.isOnline(context)) {
+            _uiState.value = _uiState.value.copy(
+                isRefreshing = false,
+                offlineToastMessage = "No internet connection"
+            )
+            return
+        }
 
-            result.onSuccess { subs ->
-                rawSubmissions = subs
-                processSubmissions()
+        refreshRemote()
+    }
+
+    private fun refreshRemote() {
+        viewModelScope.launch {
+            _uiState.value = _uiState.value.copy(isRefreshing = true, errorMessage = null)
+
+            // Trigger sync for any pending items
+            SyncSubmissionsWorker.enqueue(context)
+
+            val result = supabaseService.fetchSubmissions(agentName)
+            result.onSuccess { remoteSubs ->
+                // Sync remote into local DB (won't overwrite pending items)
+                dbHelper.syncFromRemote(remoteSubs, casperId)
                 _uiState.value = _uiState.value.copy(isRefreshing = false)
             }.onFailure { error ->
                 _uiState.value = _uiState.value.copy(
                     isRefreshing = false,
-                    errorMessage = error.message ?: "Failed to refresh history"
+                    errorMessage = if (NetworkUtils.isOnline(context)) (error.message ?: "Failed to refresh history") else null
                 )
             }
         }
+    }
+
+    fun clearOfflineToast() {
+        _uiState.value = _uiState.value.copy(offlineToastMessage = null)
     }
 
     private fun processSubmissions() {
@@ -83,12 +116,18 @@ class DashboardViewModel(
             val currentMonth = _uiState.value.selectedMonth
             val currentCycle = _uiState.value.selectedCycle
 
+            var pendingCount = 0
+
             // 1. Group by date
-            val groupedMap = mutableMapOf<String, MutableList<Submission>>()
+            val groupedMap = mutableMapOf<String, MutableList<LocalSubmission>>()
             val monthsSet = mutableSetOf<String>()
             monthsSet.add(DateUtils.getCurrentMonthYear())
 
             for (sub in subs) {
+                if (sub.syncStatus == "PENDING") {
+                    pendingCount++
+                }
+
                 val date = sub.date
                 val list = groupedMap.getOrPut(date) { mutableListOf() }
                 list.add(sub)
@@ -102,19 +141,26 @@ class DashboardViewModel(
             val groupedList = groupedMap.map { (date, dSubs) ->
                 val total = dSubs.sumOf { it.totalCount }
                 val completed = dSubs.sumOf { it.completedCount }
-                val screenshots = dSubs.filter { it.imageUrl.isNotBlank() }.map {
+                val hasPending = dSubs.any { it.syncStatus == "PENDING" }
+
+                val screenshots = dSubs.map { sub ->
+                    // Use local image path if remote URL is empty (e.g. while pending offline)
+                    val imgUri = if (sub.imageUrl.isNotBlank()) sub.imageUrl else (sub.localImagePath ?: "")
                     ScreenshotItem(
-                        url = it.imageUrl,
-                        createdAt = it.createdAt,
-                        totalCount = it.totalCount,
-                        completedCount = it.completedCount
+                        url = imgUri,
+                        createdAt = sub.createdAt,
+                        totalCount = sub.totalCount,
+                        completedCount = sub.completedCount,
+                        syncStatus = sub.syncStatus
                     )
                 }
+
                 GroupedDailySubmission(
                     date = date,
                     totalCount = total,
                     completedCount = completed,
-                    screenshots = screenshots
+                    screenshots = screenshots,
+                    hasPendingSync = hasPending
                 )
             }.sortedByDescending { DateUtils.parseDate(it.date)?.time ?: 0 }
 
@@ -139,6 +185,7 @@ class DashboardViewModel(
 
             _uiState.value = _uiState.value.copy(
                 isLoading = false,
+                pendingSyncCount = pendingCount,
                 availableMonths = availableMonths,
                 groupedSubmissions = groupedList,
                 filteredSubmissions = filtered,
@@ -168,20 +215,22 @@ class DashboardViewModel(
     fun deleteDailySubmission(date: String) {
         viewModelScope.launch {
             _uiState.value = _uiState.value.copy(isLoading = true)
-            val result = supabaseService.deleteSubmissionsByDate(agentName, date)
-            result.onSuccess {
-                rawSubmissions = rawSubmissions.filter { it.date != date }
-                processSubmissions()
-                _uiState.value = _uiState.value.copy(
-                    activeDetailSubmission = null,
-                    isLoading = false
-                )
-            }.onFailure { error ->
-                _uiState.value = _uiState.value.copy(
-                    isLoading = false,
-                    errorMessage = error.message ?: "Failed to delete submission"
-                )
+
+            // Delete from local DB first
+            val toDelete = rawSubmissions.filter { it.date == date }
+            for (sub in toDelete) {
+                dbHelper.deleteById(sub.id)
             }
+
+            // If online, also delete from Supabase
+            if (NetworkUtils.isOnline(context)) {
+                supabaseService.deleteSubmissionsByDate(agentName, date)
+            }
+
+            _uiState.value = _uiState.value.copy(
+                activeDetailSubmission = null,
+                isLoading = false
+            )
         }
     }
 

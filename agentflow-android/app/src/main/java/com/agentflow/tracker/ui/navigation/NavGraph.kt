@@ -143,8 +143,8 @@ fun AgentFlowNavGraph(
                 }
 
                 composable(Screen.Dashboard.route) {
-                    val dashboardViewModel = remember(agentName, rateAmount) {
-                        DashboardViewModel(supabaseService, agentName, rateAmount)
+                    val dashboardViewModel = remember(agentName, casperId, rateAmount) {
+                        DashboardViewModel(context, supabaseService, agentName, casperId, rateAmount)
                     }
                     DashboardScreen(viewModel = dashboardViewModel)
                 }

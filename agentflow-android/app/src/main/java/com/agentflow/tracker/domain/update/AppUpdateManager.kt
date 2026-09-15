@@ -7,6 +7,7 @@ import android.os.Build
 import android.util.Log
 import androidx.core.content.FileProvider
 import com.agentflow.tracker.BuildConfig
+import com.agentflow.tracker.domain.utils.NetworkUtils
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
@@ -57,6 +58,15 @@ class AppUpdateManager(private val context: Context) {
     }
 
     suspend fun checkForUpdates(manualCheck: Boolean = false) = withContext(Dispatchers.IO) {
+        if (!NetworkUtils.isOnline(context)) {
+            if (manualCheck) {
+                _updateState.value = UpdateState.Error("Please connect to the internet to check for updates.")
+            } else {
+                _updateState.value = UpdateState.Idle
+            }
+            return@withContext
+        }
+
         _updateState.value = UpdateState.Checking
         try {
             val request = Request.Builder()
@@ -143,7 +153,17 @@ class AppUpdateManager(private val context: Context) {
         } catch (e: Exception) {
             Log.e("AppUpdateManager", "Update check failed", e)
             if (manualCheck) {
-                _updateState.value = UpdateState.Error(e.message ?: "Failed to check for updates")
+                val isNetworkErr = !NetworkUtils.isOnline(context) ||
+                        e is java.net.UnknownHostException ||
+                        e is java.io.IOException ||
+                        (e.message?.contains("Unable to resolve host", ignoreCase = true) == true)
+
+                val userMessage = if (isNetworkErr) {
+                    "Please connect to the internet to check for updates."
+                } else {
+                    "Unable to check for updates right now. Please try again later."
+                }
+                _updateState.value = UpdateState.Error(userMessage)
             } else {
                 _updateState.value = UpdateState.Idle
             }
@@ -209,7 +229,16 @@ class AppUpdateManager(private val context: Context) {
             triggerInstall(fileUri)
         } catch (e: Exception) {
             Log.e("AppUpdateManager", "APK download failed", e)
-            _updateState.value = UpdateState.Error("Download failed: ${e.message}")
+            val isNetworkErr = !NetworkUtils.isOnline(context) ||
+                    e is java.net.UnknownHostException ||
+                    e is java.io.IOException ||
+                    (e.message?.contains("Unable to resolve host", ignoreCase = true) == true)
+            val userMessage = if (isNetworkErr) {
+                "Please connect to the internet to download the update."
+            } else {
+                "Download failed: ${e.message}"
+            }
+            _updateState.value = UpdateState.Error(userMessage)
         }
     }
 

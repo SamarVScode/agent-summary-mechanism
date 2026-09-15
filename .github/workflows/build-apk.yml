@@ -69,7 +69,7 @@ jobs:
           name: AgentFlow ${{ github.ref_name }} (Production Release)
           draft: false
           prerelease: false
-          generate_release_notes: true
+          body_path: RELEASE_CHANGELOG.md
           files: agentflow-android/app/build/outputs/apk/release/*.apk
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}

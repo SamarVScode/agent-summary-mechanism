@@ -8,8 +8,8 @@ This document serves as the permanent reference for **AgentFlow**, documenting k
 
 - **Application Name**: AgentFlow
 - **Package ID**: `com.agentflow.tracker`
-- **Current Version**: `1.0.3` (versionCode: `4`)
-- **Tech Stack**: Kotlin 2.0.20, Jetpack Compose, Material 3, Coroutines/Flow, Supabase (PostgreSQL + Auth + Storage), Google ML Kit (on-device OCR), Coil (image loading), OkHttp3.
+- **Current Version**: `1.0.4` (versionCode: `5`)
+- **Tech Stack**: Kotlin 2.0.20, Jetpack Compose, Material 3, Coroutines/Flow, SQLite (`SQLiteOpenHelper`), AndroidX WorkManager, AndroidX ExifInterface, Supabase (PostgreSQL + Auth + Storage), Google ML Kit (on-device OCR), Coil (image loading), OkHttp3.
 - **GitHub Repository**: [`SamarVScode/agent-summary-mechanism`](https://github.com/SamarVScode/agent-summary-mechanism) (branch: `main`).
 
 ---
@@ -124,3 +124,37 @@ Handled in [`NavGraph.kt`](file:///C:/Users/User/Desktop/payout%20app/agentflow-
   ```powershell
   & "$env:LOCALAPPDATA\Android\platform-tools\adb.exe" shell am start -n com.agentflow.tracker/.MainActivity
   ```
+
+---
+
+## 9. Offline-First Architecture & WorkManager Sync
+
+AgentFlow operates completely offline for daily work submission and viewing:
+
+1. **Local SQLite Caching**:
+   - Managed by [`LocalSubmissionsDbHelper.kt`](file:///C:/Users/User/Desktop/payout%20app/agentflow-android/app/src/main/java/com/agentflow/tracker/data/local/LocalSubmissionsDbHelper.kt) (`submissions_cache` table).
+   - Reactive updates broadcasted across the app via `dbUpdateTrigger: StateFlow<Long>`.
+   - Polling loops have been eliminated; UI only updates when data changes or on manual pull-to-refresh.
+2. **Immediate Offline Submission**:
+   - Downsampled screenshot is securely saved to app internal storage (`filesDir/pending_uploads/`).
+   - Entry saved locally with `sync_status = "PENDING"`.
+   - UI instantly moves to the Success screen without awaiting internet.
+3. **Background Sync via WorkManager**:
+   - [`SyncSubmissionsWorker.kt`](file:///C:/Users/User/Desktop/payout%20app/agentflow-android/app/src/main/java/com/agentflow/tracker/domain/sync/SyncSubmissionsWorker.kt) runs automatically with `NetworkType.CONNECTED` constraint.
+   - Streams pending screenshots to Supabase Storage, creates Supabase database rows, marks local records as `SYNCED`, and deletes temporary local files.
+4. **Offline UI Cues**:
+   - Pending sync counter banner on Dashboard: *"X runsheet(s) waiting to sync — Connect to internet to sync"*.
+   - "Waiting to sync" badge on pending submission cards.
+   - Pull-to-refresh displays *"No internet connection"* Toast and immediately terminates the spinner when offline.
+
+---
+
+## 10. Strict EXIF & MediaStore Date Validation
+
+To prevent submitting runsheets for incorrect dates:
+- [`ImageMetadataUtils.kt`](file:///C:/Users/User/Desktop/payout%20app/agentflow-android/app/src/main/java/com/agentflow/tracker/domain/utils/ImageMetadataUtils.kt) extracts timestamp directly from:
+  1. `MediaStore.Images.Media.DATE_TAKEN`
+  2. Embedded binary `ExifInterface` headers (`TAG_DATETIME_ORIGINAL`, `TAG_DATETIME_DIGITIZED`, `TAG_DATETIME`)
+  3. `MediaStore.Images.Media.DATE_MODIFIED`
+- **Zero Filename Guessing**: Filenames are completely ignored to avoid errors from renamed or forwarded images.
+- **Strict Block**: If `metadataDate != selectedDate`, submission is blocked with an error requiring the user to select the matching date in the date picker.

@@ -43,3 +43,10 @@
 -dontwarn androidx.compose.**
 -keep class androidx.navigation.** { *; }
 -dontwarn androidx.navigation.**
+
+# AndroidX WorkManager & Local Database
+-keep class * extends androidx.work.ListenableWorker {
+    public <init>(android.content.Context, androidx.work.WorkerParameters);
+}
+-keep class com.agentflow.tracker.domain.sync.** { *; }
+-keep class com.agentflow.tracker.data.local.** { *; }

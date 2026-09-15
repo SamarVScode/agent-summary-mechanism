@@ -216,15 +216,16 @@ fun AppUpdateDialog(
         }
 
         is UpdateState.Error -> {
+            val isOffline = updateState.message.contains("connect to the internet", ignoreCase = true)
             AlertDialog(
                 onDismissRequest = onDismiss,
                 shape = RoundedCornerShape(20.dp),
                 title = {
                     Text(
-                        text = "Update Error",
+                        text = if (isOffline) "No Internet Connection" else "Update Error",
                         fontWeight = FontWeight.Bold,
                         fontSize = 17.sp,
-                        color = MaterialTheme.colorScheme.error
+                        color = if (isOffline) MaterialTheme.colorScheme.onSurface else MaterialTheme.colorScheme.error
                     )
                 },
                 text = {

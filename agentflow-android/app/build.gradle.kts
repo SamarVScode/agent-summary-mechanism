@@ -13,8 +13,8 @@ android {
         applicationId = "com.agentflow.tracker"
         minSdk = 26
         targetSdk = 35
-        versionCode = 4
-        versionName = "1.0.3"
+        versionCode = 5
+        versionName = "1.0.4"
 
         testInstrumentationRunner = "androidx.test.runner.AndroidJUnitRunner"
         vectorDrawables {
@@ -97,6 +97,10 @@ dependencies {
     // HTTP / Networking (OkHttp)
     implementation(libs.okhttp)
     implementation(libs.okhttp.logging)
+
+    // ExifInterface & Background WorkManager
+    implementation(libs.androidx.exifinterface)
+    implementation(libs.androidx.work.runtime.ktx)
 
     // Tooling
     debugImplementation(libs.androidx.ui.tooling)

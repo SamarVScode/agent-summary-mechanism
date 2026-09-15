@@ -8,10 +8,15 @@ import java.io.ByteArrayOutputStream
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import com.agentflow.tracker.data.api.SupabaseService
+import com.agentflow.tracker.data.local.LocalSubmission
+import com.agentflow.tracker.data.local.LocalSubmissionsDbHelper
 import com.agentflow.tracker.data.model.Submission
 import com.agentflow.tracker.domain.date.DateUtils
 import com.agentflow.tracker.domain.ocr.MlKitOcrExtractor
+import com.agentflow.tracker.domain.sync.SyncSubmissionsWorker
 import com.agentflow.tracker.domain.utils.HashUtils
+import com.agentflow.tracker.domain.utils.ImageMetadataUtils
+import com.agentflow.tracker.domain.utils.NetworkUtils
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
@@ -61,13 +66,23 @@ class TrackerViewModel(
 
         viewModelScope.launch {
             try {
-                // 1. Calculate SHA-256
+                // 1. Strict Metadata Date Validation (real EXIF & MediaStore DATE_TAKEN only)
+                val metadataDate = ImageMetadataUtils.extractCaptureDate(context, uri)
+                if (!metadataDate.isNullOrBlank() && metadataDate != _uiState.value.selectedDate) {
+                    _uiState.value = _uiState.value.copy(
+                        phase = TrackerPhase.Idle,
+                        errorMessage = "Date Mismatch: This screenshot was taken on $metadataDate, but you selected ${_uiState.value.selectedDate}. Please select $metadataDate in the date picker to upload this runsheet."
+                    )
+                    return@launch
+                }
+
+                // 2. Calculate SHA-256
                 val hash = HashUtils.calculateSha256(context, uri)
                 currentFileHash = hash
 
-                // 2. Check for duplicates in Supabase across all history
-                val dupCheck = supabaseService.checkDuplicateHash(hash)
-                if (dupCheck.getOrDefault(false)) {
+                // 3. Check for duplicates in Local DB first (works 100% offline!)
+                val dbHelper = LocalSubmissionsDbHelper.getInstance(context)
+                if (dbHelper.hasFileHash(hash)) {
                     _uiState.value = _uiState.value.copy(
                         phase = TrackerPhase.Idle,
                         errorMessage = "Duplicate screenshot: This exact image has already been submitted in payout history."
@@ -75,7 +90,19 @@ class TrackerViewModel(
                     return@launch
                 }
 
-                // 3. Process with ML Kit OCR (spatial grid + mathematical validation)
+                // 4. Check for duplicates in Supabase if online
+                if (NetworkUtils.isOnline(context)) {
+                    val dupCheck = supabaseService.checkDuplicateHash(hash)
+                    if (dupCheck.getOrDefault(false)) {
+                        _uiState.value = _uiState.value.copy(
+                            phase = TrackerPhase.Idle,
+                            errorMessage = "Duplicate screenshot: This exact image has already been submitted in payout history."
+                        )
+                        return@launch
+                    }
+                }
+
+                // 5. Process with ML Kit OCR (spatial grid + mathematical validation)
                 val ocrResult = ocrExtractor.extractCounts(uri)
                 ocrResult.onSuccess { counts ->
                     val pending = counts.pendingCount ?: 0
@@ -121,10 +148,10 @@ class TrackerViewModel(
         viewModelScope.launch {
             try {
                 val dateFormatted = _uiState.value.selectedDate
+                val dbHelper = LocalSubmissionsDbHelper.getInstance(context)
 
-                // Strict deduplication: Check if agent already submitted these exact counts on this date
-                val dupSubmission = supabaseService.checkDuplicateSubmission(casperId, dateFormatted, total, completed)
-                if (dupSubmission.getOrDefault(false)) {
+                // 1. Strict deduplication: Local DB check (works offline!)
+                if (dbHelper.hasSubmission(casperId, dateFormatted, total, completed)) {
                     _uiState.value = _uiState.value.copy(
                         phase = TrackerPhase.Idle,
                         errorMessage = "Duplicate submission: A runsheet for $dateFormatted with $total total and $completed completed deliveries was already submitted."
@@ -132,7 +159,19 @@ class TrackerViewModel(
                     return@launch
                 }
 
-                // Compress & downsample image before upload to avoid memory pressure & GC pauses
+                // 2. Strict deduplication: Supabase check (if online)
+                if (NetworkUtils.isOnline(context)) {
+                    val dupSubmission = supabaseService.checkDuplicateSubmission(casperId, dateFormatted, total, completed)
+                    if (dupSubmission.getOrDefault(false)) {
+                        _uiState.value = _uiState.value.copy(
+                            phase = TrackerPhase.Idle,
+                            errorMessage = "Duplicate submission: A runsheet for $dateFormatted with $total total and $completed completed deliveries was already submitted."
+                        )
+                        return@launch
+                    }
+                }
+
+                // 3. Compress & downsample image before storage
                 val bytes = withContext(Dispatchers.IO) {
                     val stream = context.contentResolver.openInputStream(uri) ?: return@withContext null
                     val original = BitmapFactory.decodeStream(stream)
@@ -161,33 +200,37 @@ class TrackerViewModel(
                     out.toByteArray()
                 } ?: throw Exception("Failed to process image data")
 
-                val safeAgent = agentName.trim().replace(Regex("[^a-zA-Z0-9]"), "_")
-                val fileName = "${safeAgent}_${dateFormatted}_${System.currentTimeMillis()}.jpg"
-
-                // Upload to Supabase Storage
-                val uploadResult = supabaseService.uploadScreenshot(fileName, bytes, "image/jpeg")
-                if (uploadResult.isFailure) {
-                    throw uploadResult.exceptionOrNull() ?: Exception("Upload failed")
+                // 4. Save downsampled screenshot locally to internal storage
+                val submissionId = java.util.UUID.randomUUID().toString()
+                val pendingDir = java.io.File(context.filesDir, "pending_uploads").apply {
+                    if (!exists()) mkdirs()
                 }
-                val publicUrl = uploadResult.getOrThrow()
+                val localImageFile = java.io.File(pendingDir, "pending_${submissionId}.jpg")
+                withContext(Dispatchers.IO) {
+                    localImageFile.writeBytes(bytes)
+                }
 
-                // Insert into submissions table
-                val submission = Submission(
+                // 5. Insert into Local DB as PENDING (Single Source of Truth)
+                val nowStr = java.text.SimpleDateFormat("yyyy-MM-dd HH:mm:ss", java.util.Locale.US).format(java.util.Date())
+                val localSubmission = LocalSubmission(
+                    id = submissionId,
                     date = dateFormatted,
                     agentName = agentName,
                     casperId = casperId,
                     totalCount = total,
                     completedCount = completed,
-                    imageUrl = publicUrl,
+                    imageUrl = "",
+                    localImagePath = localImageFile.absolutePath,
                     fileHash = currentFileHash,
-                    processed = false
+                    syncStatus = "PENDING",
+                    createdAt = nowStr
                 )
+                dbHelper.insert(localSubmission)
 
-                val insertResult = supabaseService.insertSubmission(submission)
-                if (insertResult.isFailure) {
-                    throw insertResult.exceptionOrNull() ?: Exception("Failed to save submission record")
-                }
+                // 6. Schedule background sync via WorkManager
+                SyncSubmissionsWorker.enqueue(context)
 
+                // 7. Transition immediately to Success screen (zero network wait time, 100% offline resilient!)
                 val earnings = completed * rateAmount
                 _uiState.value = _uiState.value.copy(
                     phase = TrackerPhase.Success(total, completed, earnings)
